@@ -1,13 +1,23 @@
 name = "manolito-forestal"
-compatibility_date = "2024-07-25"
 main = "src/index.js"
+compatibility_date = "2024-07-25"
 
-[assets]
-directory = "public"
-binding = "ASSETS"
+workers_dev = true
+
+[vars]
+OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
 
 [ai]
 binding = "AI"
 
-[vars]
-OPENROUTER_MODEL = "meta-llama/llama-3.1-70b-instruct"
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[routes]]
+pattern = "manolitoforestal.space"
+custom_domain = true
+
+[[routes]]
+pattern = "www.manolitoforestal.space"
+custom_domain = true
