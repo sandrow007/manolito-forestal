@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Manolit∞ Forestal · Predictor cuántico de incendios</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg: #070a10;
+        --panel: rgba(14, 19, 28, 0.88);
+        --panel-border: rgba(255, 255, 255, 0.08);
+        --text: #e6ecf2;
+        --text-muted: #7c8796;
+        --cyan: #00f3ff;
+        --amber: #ffaa00;
+        --red: #ff003c;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0; padding: 0; height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', sans-serif;
+        overflow: hidden;
+    }
+
+    h1, h2, h3, .display { font-family: 'Rajdhani', sans-serif; letter-spacing: 0.02em; }
+    code, .mono, .quantum-log-section pre, .log-line { font-family: 'JetBrains Mono', monospace; }
+
+    #map { position: absolute; inset: 0; z-index: 1; }
+    .leaflet-control-layers, .leaflet-bar { background: var(--panel) !important; color: var(--text); }
+    .leaflet-control-layers-toggle { filter: invert(1); }
+
+    /* ---------- Selector de idioma ---------- */
+    #language-select-wrap {
+        position: absolute; top: 16px; left: 66px; z-index: 500;
+    }
+    #language-select {
+        background: var(--panel); color: var(--text);
+        border: 1px solid var(--panel-border); border-radius: 8px;
+        padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 0.85rem;
+        backdrop-filter: blur(8px);
+    }
+
+    /* ---------- Dashboard principal ---------- */
+    #dashboard {
+        position: absolute; top: 16px; right: 16px; z-index: 500;
+        width: 340px; max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        transition: transform 0.25s ease, opacity 0.25s ease;
+        padding: 18px;
+    }
+    #dashboard.closed { transform: translateX(120%); opacity: 0; pointer-events: none; }
+
+    #dashboard.estado-reposo { border-color: rgba(0,243,255,0.35); }
+    #dashboard.estado-ambar  { border-color: rgba(255,170,0,0.45); }
+    #dashboard.estado-rojo   { border-color: rgba(255,0,60,0.5); }
+
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .dashboard-header h1 { font-size: 1.15rem; margin: 0; font-weight: 700; }
+    .dashboard-header h1 span { color: var(--cyan); }
+
+    .icon-btn {
+        background: transparent; border: 1px solid var(--panel-border);
+        color: var(--text-muted); border-radius: 8px; width: 30px; height: 30px;
+        cursor: pointer; font-size: 0.9rem; line-height: 1;
+    }
+    .icon-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+    #reopen-dashboard-btn {
+        display: none; position: absolute; top: 16px; right: 16px; z-index: 500;
+        background: var(--panel); border: 1px solid var(--panel-border);
+        color: var(--text); border-radius: 10px; padding: 10px 14px; cursor: pointer;
+        backdrop-filter: blur(10px);
+    }
+
+    .mode-toggle-row { margin-bottom: 14px; }
+    #toggle-mode {
+        width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--panel-border);
+        background: rgba(255,255,255,0.03); color: var(--text-muted); font-size: 0.78rem; cursor: pointer;
+    }
+    #toggle-mode:hover { color: var(--text); }
+
+    .readout-coords { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
+
+    .percent-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+    #ui-percent { font-size: 2.4rem; font-weight: 700; font-family: 'Rajdhani', sans-serif; }
+    #ui-alert {
+        font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em;
+        padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.06);
+    }
+    .estado-reposo #ui-percent, .estado-reposo #ui-alert { color: var(--cyan); }
+    .estado-ambar #ui-percent, .estado-ambar #ui-alert { color: var(--amber); }
+    .estado-rojo #ui-percent, .estado-rojo #ui-alert { color: var(--red); }
+
+    #ui-action { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 14px; }
+
+    .clima-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px;
+        font-size: 0.8rem; margin-bottom: 14px;
+    }
+    .clima-grid div span.label { color: var(--text-muted); display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    #ui-propagacion-texto {
+        font-size: 0.8rem; line-height: 1.5; color: var(--text);
+        background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px;
+        margin-bottom: 14px; white-space: pre-line;
+    }
+
+    #contador-fuegos {
+        font-size: 0.78rem; color: var(--red); margin-bottom: 14px;
+        border-left: 2px solid var(--red); padding-left: 8px;
+    }
+
+    /* ---------- Log cuántico ---------- */
+    #quantum-log-section { border-top: 1px solid var(--panel-border); padding-top: 12px; margin-bottom: 14px; }
+    #quantum-log-section h2 {
+        font-size: 0.85rem; margin: 0 0 8px 0; color: var(--cyan);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    #quantum-log-section .log-line {
+        font-size: 0.7rem; color: var(--text-muted); line-height: 1.6;
+        margin-bottom: 6px; overflow-wrap: break-word;
+    }
+    #quantum-log-section.section-collapsed .log-line { display: none; }
+
+    .btn-primary {
+        width: 100%; padding: 10px; border-radius: 8px; border: none;
+        background: var(--cyan); color: #051013; font-weight: 600; cursor: pointer;
+        font-family: 'Rajdhani', sans-serif; letter-spacing: 0.02em; font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+
+    #open-legal-link { display: block; text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; }
+
+    /* ---------- Chat Manolito ---------- */
+    #manolito-toggle-btn {
+        position: absolute; bottom: 20px; right: 20px; z-index: 600;
+        width: 56px; height: 56px; border-radius: 50%; border: none;
+        background: var(--cyan); color: #051013; font-size: 1.4rem; cursor: pointer;
+        box-shadow: 0 4px 20px rgba(0,243,255,0.35);
+    }
+
+    #manolito-panel {
+        position: absolute; bottom: 90px; right: 20px; z-index: 600;
+        width: 340px; height: 460px; max-height: 70vh;
+        background: var(--panel); border: 1px solid var(--panel-border);
+        border-radius: 14px; backdrop-filter: blur(10px);
+        display: flex; flex-direction: column;
+        transform: translateY(20px) scale(0.97); opacity: 0; pointer-events: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #manolito-panel.manolito-abierto { transform: translateY(0) scale(1); opacity: 1; pointer-events: all; }
+
+    .manolito-panel-header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 14px; border-bottom: 1px solid var(--panel-border);
+    }
+    .manolito-panel-header strong { font-family: 'Rajdhani', sans-serif; font-size: 1rem; }
+
+    #manolito-mensajes { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .manolito-msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 0.83rem; line-height: 1.4; white-space: pre-line; }
+    .msg-user { align-self: flex-end; background: var(--cyan); color: #051013; border-bottom-right-radius: 3px; }
+    .msg-bot { align-self: flex-start; background: rgba(255,255,255,0.06); border-bottom-left-radius: 3px; }
+    .msg-error { border: 1px solid var(--red); color: var(--red); background: rgba(255,0,60,0.08); }
+    .msg-thinking { color: var(--text-muted); font-style: italic; }
+
+    .manolito-input-row { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--panel-border); }
+    #manolito-input {
+        flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border);
+        color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem;
+    }
+    #manolito-send-btn {
+        background: var(--cyan); border: none; color: #051013; border-radius: 8px;
+        width: 38px; cursor: pointer; font-size: 1rem;
+    }
+
+    /* ---------- Modal legal ---------- */
+    #legal-modal {
+        display: none; position: fixed; inset: 0; z-index: 1000;
+        background: rgba(2,4,8,0.82); backdrop-filter: blur(4px);
+        align-items: center; justify-content: center;
+    }
+    #legal-modal .legal-box {
+        background: #0c1119; border: 1px solid var(--panel-border); border-radius: 14px;
+        width: min(640px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    .legal-box-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--panel-border); }
+    #legal-content-container { padding: 18px 20px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); }
+    #legal-content-container h2 { color: var(--text); font-size: 1.1rem; }
+    #legal-content-container h3 { color: var(--cyan); font-size: 0.95rem; margin-top: 18px; }
+    #legal-content-container a { color: var(--cyan); }
+    .legal-box-footer { padding: 14px 20px; border-top: 1px solid var(--panel-border); }
+
+    @media (max-width: 640px) {
+        #dashboard { width: calc(100vw - 24px); right: 12px; top: 12px; }
+        #manolito-panel { width: calc(100vw - 24px); right: 12px; }
+        #language-select-wrap { top: 12px; left: 54px; }
+    }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="language-select-wrap">
+    <select id="language-select">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+    </select>
+</div>
+
+<button id="reopen-dashboard-btn" class="icon-btn" style="width:auto;">☰ Panel</button>
+
+<!-- ================= DASHBOARD ================= -->
+<div id="dashboard">
+    <div class="dashboard-header">
+        <h1>MANOLIT<span>∞</span> FORESTAL</h1>
+        <button id="toggle-dashboard" class="icon-btn" title="Cerrar panel">✕</button>
+    </div>
+
+    <div class="mode-toggle-row">
+        <button id="toggle-mode">Modo científico</button>
+    </div>
+
+    <div class="readout-coords" id="ui-coords">--, --</div>
+
+    <div class="percent-row">
+        <span id="ui-percent">--%</span>
+        <span id="ui-alert" data-estado="inicial">SIN EVALUAR</span>
+    </div>
+    <div id="ui-action">Pincha un punto en el mapa para evaluar el riesgo de esa zona.</div>
+
+    <div class="clima-grid">
+        <div><span class="label">Temp.</span><span id="ui-temp">-- °C</span></div>
+        <div><span class="label">Humedad</span><span id="ui-hum">-- %</span></div>
+        <div><span class="label">Viento</span><span id="ui-wind">-- km/h</span></div>
+        <div><span class="label">Dirección</span><span id="ui-wind-dir">--</span></div>
+    </div>
+
+    <div id="ui-propagacion-texto"></div>
+
+    <div id="contador-fuegos"></div>
+
+    <section id="quantum-log-section">
+        <h2>Registro cuántico ▾</h2>
+        <div class="log-line" id="log-ry">Sin ejecutar aún.</div>
+        <div class="log-line" id="log-cnot"></div>
+        <div class="log-line" id="log-medicion"></div>
+        <div class="log-line" id="log-detalles"></div>
+    </section>
+
+    <button id="btn-descargar-pdf" class="btn-primary">Descargar informe PDF</button>
+    <a href="#" id="open-legal-link">Aviso legal y metodología</a>
+</div>
+
+<!-- ================= CHAT MANOLITO ================= -->
+<button id="manolito-toggle-btn" title="Hablar con Manolito">🔥</button>
+
+<div id="manolito-panel">
+    <div class="manolito-panel-header">
+        <strong>Manolito 🌲</strong>
+        <button id="manolito-close-btn" class="icon-btn">✕</button>
+    </div>
+    <div id="manolito-mensajes"></div>
+    <div class="manolito-input-row">
+        <input type="text" id="manolito-input" placeholder="Pregúntale a Manolito…" />
+        <button id="manolito-send-btn">➤</button>
+    </div>
+</div>
+
+<!-- ================= MODAL LEGAL ================= -->
+<div id="legal-modal">
+    <div class="legal-box">
+        <div class="legal-box-header">
+            <strong>Aviso legal</strong>
+            <button id="modal-close-btn" class="icon-btn">✕</button>
+        </div>
+        <div id="legal-content-container"></div>
+        <div class="legal-box-footer">
+            <button id="accept-legal-btn" class="btn-primary">Entendido, continuar</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="idiomas.js"></script>
+<script src="motor-cuantico.js"></script>
+<script src="manolito-chat.js"></script>
+<script src="pdf-informe.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<div class="legal-container">
+    <h2>AVISO LEGAL Y METODOLOGÍA · MANOLIT∞ FORESTAL</h2>
+
+    <section>
+        <h3>Demo en vídeo y otros proyectos del autor</h3>
+        <p>Este simulador es un proyecto personal de código abierto. Puedes ver una <a href="https://www.youtube.com/watch?v=Gru5nDlfGc8" target="_blank" rel="noopener noreferrer">demo en vídeo en YouTube</a> o explorar otros proyectos del autor como el mapa de <a href="https://www.islasdecalorsevilla.com" target="_blank" rel="noopener noreferrer">Islas de Calor de Sevilla</a>, <a href="https://www.manolitoaire.com" target="_blank" rel="noopener noreferrer">ManolitoAire</a> —calidad del aire y mapa de sombras en 3D— y la versión original del asesor, <a href="https://manolitoinfinito.space" target="_blank" rel="noopener noreferrer">Manolito Infinito</a>.</p>
+    </section>
+
+    <section>
+        <h3>1. Qué es Manolit∞ Forestal</h3>
+        <p>Manolit∞ Forestal es una herramienta de código abierto de apoyo a la decisión en materia de prevención y gestión de incendios forestales. Integra datos meteorológicos reales (Open-Meteo), detección de incendios activos por satélite (NASA FIRMS/VIIRS), un modelo de estrés de biomasa basado en simulación de circuitos cuánticos, un módulo de predicción de propagación por viento, y "Manolito", un asesor conversacional especializado en comportamiento del fuego y priorización de zonas de trabajo.</p>
+        <p>El objetivo del proyecto es ofrecer, de forma gratuita y accesible, información técnica accionable —qué franjas de biomasa priorizar, hacia dónde tendería a avanzar un incendio según el viento, y qué zonas conviene asegurar primero— para apoyar tanto a la ciudadanía y comunidades rurales como a técnicos forestales, agentes medioambientales y servicios de extinción.</p>
+    </section>
+
+    <section>
+        <h3>2. Qué hace exactamente Manolito</h3>
+        <ul>
+            <li><strong>Localiza incendios activos</strong> a partir de la capa satelital VIIRS/NASA FIRMS, con nivel de confianza de la detección.</li>
+            <li><strong>Calcula el estrés de biomasa</strong> de cualquier punto forestal a partir de temperatura, humedad relativa y viento, mediante un modelo cuántico de 3 qubits con entrelazamiento (puertas RY/CNOT y medición según la regla de Born).</li>
+            <li><strong>Predice la dirección de propagación</strong> más probable a partir de la dirección y velocidad del viento, distinguiendo cabeza, flancos y cola del incendio, y recomienda qué franja trabajar con prioridad.</li>
+            <li><strong>Responde preguntas técnicas</strong> a través del asesor Manolito, entrenado para dar recomendaciones concretas (no genéricas) sobre dónde actuar primero.</li>
+            <li><strong>Genera un informe descargable en PDF</strong> con coordenadas, localidad aproximada, datos meteorológicos y la recomendación de zonas de trabajo, para poder compartirlo o archivarlo.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h3>3. Límites del sistema — lo que Manolit∞ Forestal NO es</h3>
+        <ul>
+            <li><strong>No es un servicio oficial de emergencias.</strong> No sustituye bajo ningún concepto las comunicaciones, alertas o instrucciones de bomberos, Protección Civil, AEMET o las autoridades forestales competentes. Ante un incendio activo o cualquier emergencia, contacta siempre y de inmediato con el <strong>112</strong>.</li>
+            <li><strong>No es hardware cuántico real.</strong> El "motor cuántico" es una simulación matemática de un circuito de 3 qubits, ejecutada íntegramente en el navegador mediante JavaScript. No hay ordenador cuántico físico ni servidores externos procesando la operación.</li>
+            <li><strong>Es un modelo de apoyo a la decisión, no una certeza.</strong> Las predicciones de propagación y las recomendaciones de zonas de trabajo se basan en datos meteorológicos abiertos y en un modelo simplificado; no incorporan variables como topografía detallada, tipo exacto de combustible o humedad del combustible muerto/vivo medida in situ. La decisión final de despliegue de medios corresponde siempre al mando de extinción.</li>
+            <li><strong>Sin ánimo de lucro.</strong> El proyecto es gratuito, no vende datos ni incluye publicidad.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h3>4. Privacidad y tratamiento de datos</h3>
+        <ul>
+            <li><strong>Consultas meteorológicas:</strong> al hacer clic en el mapa, el navegador consulta directamente la API pública de Open-Meteo con las coordenadas seleccionadas. No almacenamos esas consultas en servidores propios.</li>
+            <li><strong>Geolocalización de lugares:</strong> el nombre aproximado del lugar (municipio/provincia) se obtiene mediante un servicio externo de geocodificación inversa (BigDataCloud), usado únicamente para etiquetar el informe.</li>
+            <li><strong>Chat con Manolito:</strong> los mensajes que envíes al asesor, junto con el contexto de la zona seleccionada (coordenadas, viento, % de estrés), se envían a un proxy propio en Cloudflare que reenvía la consulta a un modelo de lenguaje para generar la respuesta. No se almacenan conversaciones de forma permanente ni se usan con fines distintos a responder la consulta.</li>
+            <li><strong>Sin registros ni cuentas:</strong> no se requieren correos electrónicos, contraseñas ni registros de ningún tipo para usar el simulador.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h3>5. Cookies y almacenamiento técnico</h3>
+        <p>Esta web <strong>no utiliza cookies de rastreo, publicidad ni marketing</strong>. Únicamente se emplea almacenamiento técnico local (<code>localStorage</code>) para recordar la aceptación de este aviso y el idioma seleccionado. Al navegar y hacer clic en el mapa, aceptas este marco de transparencia técnica y ciencia abierta.</p>
+    </section>
+</div>
