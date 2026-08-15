@@ -1,130 +1,427 @@
 /**
- * MANOLIT∞ FORESTAL - Traducciones
- * Expone window.idiomaActual y la función global t(clave, variables)
- * usada por motor-cuantico.js y manolito-chat.js.
+ * MANOLIT∞ FORESTAL - Motor de idiomas
+ * Castellano, Català, Euskera, Galego, English, Français
  */
-
-const TRADUCCIONES = {
+const IDIOMAS = {
     es: {
-        calculando: "Calculando…",
+        titulo: "MANOLIT∞ FORESTAL",
+        subtitulo: "SIMULADOR CUÁNTICO DE ESTRÉS DE BIOMASA Y PREDICCIÓN DE PROPAGACIÓN",
+        modoCientifico: "Modo Científico",
+        modoCiudadano: "Modo Ciudadano",
+        estres: "ESTRÉS DE BIOMASA",
+        selecciona: "SELECCIONA UNA ZONA FORESTAL",
+        datosEntrada: "> DATOS DE ENTRADA",
+        latlon: "LAT/LON",
+        temp: "TEMP (Q0)",
+        hum: "HUMEDAD (Q1)",
+        viento: "VIENTO (Q2)",
+        direccion: "DIRECCIÓN VIENTO",
+        nucleo: "> NÚCLEO CUÁNTICO (3 Qubits)",
+        incendios: "> INCENDIOS ACTIVOS (FIRMS)",
+        cargando: "Cargando capa de fuegos...",
+        avisoLegal: "Aviso Legal y Metodología",
+        descargarPdf: "Descargar informe PDF",
+        chatTitulo: "Manolito · Asesor de Extinción",
+        chatPlaceholder: "Pregunta a Manolito sobre esta zona...",
+        chatSaludo: "Soy Manolito. Dime coordenadas, viento o una zona y te digo dónde actuar primero.",
+        propagacion: "> PROPAGACIÓN Y ZONAS DE TRABAJO",
+        zonaSeguro: "Zona segura – estrés normal",
+        zonaAmbar: "Alerta preventiva – estrés moderado",
+        zonaRojo: "Polvorín crítico – riesgo inminente",
+        calculando: "CALCULANDO...",
         zonaAgua: "ZONA DE AGUA",
-        zonaAguaMsg: "Este punto está sobre una masa de agua. No se calcula estrés de biomasa aquí.",
-        simulacionNoIniciadaAgua: "Simulación no aplicable: zona de agua.",
-        errorDatosClima: "No se pudieron obtener los datos meteorológicos de esta zona. Inténtalo de nuevo.",
-        popupZonaAgua: "Zona de agua",
-
-        logRyAplicadas: "Puertas RY aplicadas",
-        logCnotEjecutados: "Entrelazamiento CNOT ejecutado",
-        logMedicionEjecutada: "Medición según la regla de Born ejecutada",
-
-        zonaSeguro: "Zona en calma",
-        actionOptimo: "Condiciones estables. No se requiere acción prioritaria en este punto.",
-        zonaAmbar: "Zona de vigilancia",
-        actionRecomendada: "Estrés de biomasa moderado-alto. Se recomienda vigilancia y prevención activa.",
-        zonaRojo: "Riesgo crítico",
-        actionUrgente: "Estrés de biomasa crítico. Prioriza esta zona para labores de prevención inmediatas.",
-
-        popupEstresBiomasa: "Estrés de biomasa",
-
-        trabajoUrgenciaBaja: "baja",
-        trabajoUrgenciaMedia: "media",
-        trabajoUrgenciaAlta: "alta",
-        trabajoVientoFlojo: "viento flojo",
-        trabajoVientoModerado: "viento moderado",
-        trabajoVientoFuerte: "viento fuerte",
-        trabajoTexto: "El viento sopla desde el {cardCola} ({windDirOrigen}°) a {windSpeed} km/h ({intensidadViento}). Un incendio en este punto avanzaría hacia el {cardAvance}: prioriza la franja de cabeza en esa dirección y trabaja los flancos hacia el {cardFlancoIzq} y el {cardFlancoDer}.\n\nUrgencia de intervención: {urgencia}.",
-        tooltipPropagacion: "Cono de propagación estimado",
-
-        ceroFuegosVisibles: "Sin incendios activos en esta zona del mapa",
-        popupIncendioActivo: "Incendio activo (NASA FIRMS)",
+        zonaAguaMsg: "No es posible calcular estrés de biomasa forestal sobre el agua.",
+        simulacionNoIniciadaAgua: "> Simulación no iniciada (zona de agua).",
+        popupZonaAgua: "Zona de Agua",
+        errorDatosClima: "Error al obtener datos meteorológicos. Verifica la conexión.",
+        ceroFuegosVisibles: "0 fuegos visibles en esta zona",
+        fuegosActivosDetectados: "{count} fuegos activos detectados",
+        errorFirms: "Error al conectar con FIRMS",
+        errorFirmsDev: "Mostrando fuegos de EJEMPLO (usa 'wrangler dev' para datos reales)",
+        popupIncendioActivo: "Incendio activo (VIIRS)",
         popupBrillo: "Brillo",
         popupConfianza: "Confianza",
-        popupEvaluarRiesgo: "Evaluar riesgo aquí",
-        fuegosActivosDetectados: "{count} incendios activos detectados en esta zona",
-        errorFirmsDev: "Mostrando datos de ejemplo (FIRMS no disponible ahora mismo)",
-
-        modoCientifico: "Modo científico",
-        modoCiudadano: "Modo ciudadano",
-        titleModoCiencia: "Cambiar a modo científico (todos los detalles técnicos)",
-        titleModoCiudadano: "Cambiar a modo ciudadano (lectura simplificada)",
-        titleColapsar: "Pulsa para colapsar/expandir",
-        errorCargaLegal: "No se pudo cargar el aviso legal. Recarga la página.",
-
-        chatSaludo: "¡Hola! Soy Manolit∞ Pincha un punto en el mapa y pregúntame lo que quieras sobre esa zona."
+        popupEvaluarRiesgo: "Evaluar riesgo cuántico",
+        tooltipPropagacion: "Zona estimada de propagación (según viento actual)",
+        popupEstresBiomasa: "Estrés de Biomasa",
+        actionOptimo: "Biomasa en estado óptimo. Continúa con la vigilancia periódica de la zona.",
+        actionRecomendada: "<strong>ACCIÓN RECOMENDADA:</strong> Solicita a los servicios forestales la revisión y limpieza preventiva de esta franja, priorizando cabeza y flancos según el viento.",
+        actionUrgente: "<strong>ACCIÓN URGENTE:</strong> Notifica a bomberos/servicios forestales. Consulta el apartado de Propagación para las zonas prioritarias de trabajo.",
+        logRyAplicadas: "> RY(θ) aplicadas.",
+        logCnotEjecutados: "> CNOT (0→2) y CNOT (2→1) ejecutados. Variables entrelazadas.",
+        logMedicionEjecutada: "> Medición de Born ejecutada. Colapso del estado.",
+        titleModoCiudadano: "Ocultar detalles técnicos",
+        titleModoCiencia: "Ver detalles técnicos de la simulación",
+        titleColapsar: "Click para expandir/colapsar",
+        errorCargaLegal: "Error al cargar el contenido del aviso legal. Por favor, recarga la página.",
+        trabajoUrgenciaBaja: "vigilancia preventiva rutinaria",
+        trabajoUrgenciaMedia: "trabajo preventivo programado en los próximos días",
+        trabajoUrgenciaAlta: "intervención urgente, prioridad alta",
+        trabajoVientoFlojo: "viento flojo: la propagación esperada sería moderada y relativamente predecible",
+        trabajoVientoModerado: "viento moderado-fuerte: la cabeza de un posible incendio avanzaría con velocidad significativa",
+        trabajoVientoFuerte: "viento fuerte: riesgo de comportamiento errático, focos secundarios por pavesas y avance muy rápido en cabeza",
+        trabajoTexto: `Con viento procedente del {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendio en este punto avanzaría hacia el {cardAvance}. {intensidadViento}.\n\nPRIORIDAD 1 - CABEZA (dirección {cardAvance}): asegurar cortafuegos y retirar biomasa en la franja situada a favor del viento; es la zona de mayor velocidad de avance y de mayor riesgo para personas y estructuras.\n\nPRIORIDAD 2 - FLANCOS ({cardFlancoIzq} y {cardFlancoDer}): trabajar estas franjas perpendiculares para evitar que el incendio "abra" y aumente su frente activo.\n\nZONA DE MENOR PRIORIDAD INMEDIATA - COLA ({cardCola}, a barlovento): el avance del fuego en esta dirección es mucho más lento; es la zona relativamente más segura para maniobras de apoyo y puntos de control, aunque no debe descuidarse.\n\nNivel recomendado de actuación: {urgencia}.`
+    },
+    ca: {
+        titulo: "MANOLIT∞ FORESTAL",
+        subtitulo: "SIMULADOR QUÀNTIC D'ESTRÈS DE BIOMASSA I PREDICCIÓ DE PROPAGACIÓ",
+        modoCientifico: "Mode Científic",
+        modoCiudadano: "Mode Ciutadà",
+        estres: "ESTRÈS DE BIOMASSA",
+        selecciona: "SELECCIONA UNA ZONA FORESTAL",
+        datosEntrada: "> DADES D'ENTRADA",
+        latlon: "LAT/LON",
+        temp: "TEMP (Q0)",
+        hum: "HUMITAT (Q1)",
+        viento: "VENT (Q2)",
+        direccion: "DIRECCIÓ DEL VENT",
+        nucleo: "> NUCLI QUÀNTIC (3 Qubits)",
+        incendios: "> INCENDIS ACTIUS (FIRMS)",
+        cargando: "Carregant capa d'incendis...",
+        avisoLegal: "Avís Legal i Metodologia",
+        descargarPdf: "Descarregar informe PDF",
+        chatTitulo: "Manolito · Assessor d'Extinció",
+        chatPlaceholder: "Pregunta a Manolito sobre aquesta zona...",
+        chatSaludo: "Sóc Manolito. Dóna'm coordenades, vent o una zona i et diré on actuar primer.",
+        propagacion: "> PROPAGACIÓ I ZONES DE TREBALL",
+        zonaSeguro: "Zona segura – estrès normal",
+        zonaAmbar: "Alerta preventiva – estrès moderat",
+        zonaRojo: "Pólvora crítica – risc imminent",
+        calculando: "CALCULANT...",
+        zonaAgua: "ZONA D'AIGUA",
+        zonaAguaMsg: "No és possible calcular l'estrès de biomassa forestal sobre l'aigua.",
+        simulacionNoIniciadaAgua: "> Simulació no iniciada (zona d'aigua).",
+        popupZonaAgua: "Zona d'Aigua",
+        errorDatosClima: "Error en obtenir dades meteorològiques. Verifiqueu la connexió.",
+        ceroFuegosVisibles: "0 focs visibles en aquesta zona",
+        fuegosActivosDetectados: "{count} focs actius detectats",
+        errorFirms: "Error en connectar amb FIRMS",
+        errorFirmsDev: "Mostrant focs d'EXEMPLE (usa 'wrangler dev' per a dades reals)",
+        popupIncendioActivo: "Incendi actiu (VIIRS)",
+        popupBrillo: "Brillantor",
+        popupConfianza: "Confiança",
+        popupEvaluarRiesgo: "Avaluar risc quàntic",
+        tooltipPropagacion: "Zona estimada de propagació (segons el vent actual)",
+        popupEstresBiomasa: "Estrès de Biomassa",
+        actionOptimo: "Biomassa en estat òptim. Continueu amb la vigilància periòdica de la zona.",
+        actionRecomendada: "<strong>ACCIÓ RECOMANADA:</strong> Sol·liciteu als serveis forestals la revisió i neteja preventiva d'aquesta franja, prioritzant cap i flancs segons el vent.",
+        actionUrgente: "<strong>ACCIÓ URGENT:</strong> Notifiqueu a bombers/serveis forestals. Consulteu l'apartat de Propagació per a les zones prioritàries de treball.",
+        logRyAplicadas: "> RY(θ) aplicades.",
+        logCnotEjecutados: "> CNOT (0→2) i CNOT (2→1) executats. Variables entrellaçades.",
+        logMedicionEjecutada: "> Mesura de Born executada. Col·lapse de l'estat.",
+        titleModoCiudadano: "Amagar detalls tècnics",
+        titleModoCiencia: "Veure detalls tècnics de la simulació",
+        titleColapsar: "Clic per expandir/col·lapsar",
+        errorCargaLegal: "Error en carregar el contingut de l'avís legal. Si us plau, recarregueu la pàgina.",
+        trabajoUrgenciaBaja: "vigilància preventiva rutinària",
+        trabajoUrgenciaMedia: "treball preventiu programat per als propers dies",
+        trabajoUrgenciaAlta: "intervenció urgent, prioritat alta",
+        trabajoVientoFlojo: "vent fluix: la propagació esperada seria moderada i relativament predictible",
+        trabajoVientoModerado: "vent moderat-fort: el cap d'un possible incendi avançaria amb velocitat significativa",
+        trabajoVientoFuerte: "vent fort: risc de comportament erràtic, focus secundaris per paveses i avanç molt ràpid al cap",
+        trabajoTexto: `Amb vent procedent del {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendi en aquest punt avançaria cap al {cardAvance}. {intensidadViento}.\n\nPRIORITAT 1 - CAP (direcció {cardAvance}): assegurar tallafocs i retirar biomassa a la franja situada a favor del vent; és la zona de major velocitat d'avanç i de major risc per a persones i estructures.\n\nPRIORITAT 2 - FLANCS ({cardFlancoIzq} i {cardFlancoDer}): treballar aquestes franges perpendiculars per evitar que l'incendi "obri" i augmenti el seu front actiu.\n\nZONA DE MENOR PRIORITAT IMMEDIATA - CUA ({cardCola}, a sobrevent): l'avanç del foc en aquesta direcció és molt més lent; és la zona relativament més segura per a maniobres de suport i punts de control, encara que no s'ha de descuidar.\n\nNivell recomanat d'actuació: {urgencia}.`
+    },
+    eu: {
+        titulo: "MANOLIT∞ FORESTAL",
+        subtitulo: "BIOMASA ESTRESAREN SIMULAGAILU KUANTIKOA ETA HEDAPEN IRAGARPENA",
+        modoCientifico: "Modu Zientifikoa",
+        modoCiudadano: "Herritar Modua",
+        estres: "BIOMASA ESTRESA",
+        selecciona: "AUKERATU BASO-EREMU BAT",
+        datosEntrada: "> SARRERA DATUAK",
+        latlon: "LAT/LON",
+        temp: "TENP. (Q0)",
+        hum: "HEZETASUNA (Q1)",
+        viento: "HAIZEA (Q2)",
+        direccion: "HAIZEAREN NORABIDEA",
+        nucleo: "> NUKLEO KUANTIKOA (3 Qubit)",
+        incendios: "> SU AKTIBOAK (FIRMS)",
+        cargando: "Suen geruza kargatzen...",
+        avisoLegal: "Lege Oharra eta Metodologia",
+        descargarPdf: "PDF txostena deskargatu",
+        chatTitulo: "Manolito · Itzalketa Aholkularia",
+        chatPlaceholder: "Galdetu Manolitori eremu honi buruz...",
+        chatSaludo: "Manolito naiz. Eman koordenatuak, haizea edo eremu bat, eta esango dizut non jardun lehenik.",
+        propagacion: "> HEDAPENA ETA LAN-EREMUAK",
+        zonaSeguro: "Eremu segurua – estres normala",
+        zonaAmbar: "Prebentzio alerta – estres moderatua",
+        zonaRojo: "Arrisku larria – arrisku hurbila",
+        calculando: "KALKULATZEN...",
+        zonaAgua: "UR EREMUA",
+        zonaAguaMsg: "Ezin da baso-biomasaren estresa kalkulatu ur gainean.",
+        simulacionNoIniciadaAgua: "> Simulazioa ez da hasi (ur eremua).",
+        popupZonaAgua: "Ur Eremua",
+        errorDatosClima: "Errorea datu meteorologikoak lortzean. Egiaztatu konexioa.",
+        ceroFuegosVisibles: "0 su ikusgai eremu honetan",
+        fuegosActivosDetectados: "{count} su aktibo detektatu dira",
+        errorFirms: "Errorea FIRMS-ekin konektatzean",
+        errorFirmsDev: "ADIBIDEZKO suak erakusten (erabili 'wrangler dev' benetako datuetarako)",
+        popupIncendioActivo: "Su aktiboa (VIIRS)",
+        popupBrillo: "Distira",
+        popupConfianza: "Konfiantza",
+        popupEvaluarRiesgo: "Arrisku kuantikoa ebaluatu",
+        tooltipPropagacion: "Zabalpen estimatua (uneko haizearen arabera)",
+        popupEstresBiomasa: "Biomasa Estresa",
+        actionOptimo: "Biomasa egoera ezin hobean. Jarraitu eremuaren aldizkako zaintzarekin.",
+        actionRecomendada: "<strong>GOMENDATUTAKO EKINTZA:</strong> Eskatu baso-zerbitzuei zerrenda honen prebentzio-berrikuspena eta garbiketa, haizearen arabera burua eta hegalak lehenetsiz.",
+        actionUrgente: "<strong>PREMIAZKO EKINTZA:</strong> Jakinarazi suhiltzaileei/baso-zerbitzuei. Kontsultatu Hedapen atala lehentasunezko lan-eremuetarako.",
+        logRyAplicadas: "> RY(θ) aplikatuta.",
+        logCnotEjecutados: "> CNOT (0→2) eta CNOT (2→1) exekutatuta. Aldagaiak korapilatuta.",
+        logMedicionEjecutada: "> Born-en neurketa exekutatuta. Egoeraren kolapsoa.",
+        titleModoCiudadano: "Xehetasun teknikoak ezkutatu",
+        titleModoCiencia: "Simulazioaren xehetasun teknikoak ikusi",
+        titleColapsar: "Egin klik zabaltzeko/tolesteko",
+        errorCargaLegal: "Errorea lege-oharraren edukia kargatzean. Mesedez, birkargatu orria.",
+        trabajoUrgenciaBaja: "prebentziozko zaintza erregularra",
+        trabajoUrgenciaMedia: "datozen egunetan programatutako prebentzio-lana",
+        trabajoUrgenciaAlta: "premiazko esku-hartzea, lehentasun handia",
+        trabajoVientoFlojo: "haize ahula: espero den hedapena moderatua eta nahiko aurreikusgarria litzateke",
+        trabajoVientoModerado: "haize moderatu-indartsua: sute posible baten buruak abiadura handiz egingo luke aurrera",
+        trabajoVientoFuerte: "haize indartsua: portaera irregularra izateko arriskua, txinpartengatiko bigarren mailako fokuak eta aurrerapen oso azkarra buruan",
+        trabajoTexto: `{cardCola}-tik datorren haizearekin ({windDirOrigen}°) {windSpeed} km/h-ko abiaduran, puntu honetako sute batek {cardAvance}-rantz egingo luke aurrera. {intensidadViento}.\n\nLEHENTASUNA 1 - BURUA ({cardAvance} norabidea): suebakiak ziurtatu eta biomasa kendu haizearen aldeko zerrendan; abiadura handieneko eta pertsona eta egiturarentzako arrisku handieneko eremua da.\n\nLEHENTASUNA 2 - HEGALAK ({cardFlancoIzq} eta {cardFlancoDer}): zerrenda perpendikular hauek landu, suteak "ireki" eta bere fronte aktiboa handitzea saihesteko.\n\nBEREHALAKO LEHENTASUN TXIKIAGOKO EREMUA - BUZTANA ({cardCola}, haizearen kontra): suaren aurrerapena norabide honetan askoz motelagoa da; laguntza-maniobrak eta kontrol-puntuak egiteko eremu nahiko seguruena da, baina ez da alde batera utzi behar.\n\nJarduera-maila gomendatua: {urgencia}.`
+    },
+    gl: {
+        titulo: "MANOLIT∞ FORESTAL",
+        subtitulo: "SIMULADOR CUÁNTICO DE ESTRÉS DE BIOMASA E PREDICIÓN DE PROPAGACIÓN",
+        modoCientifico: "Modo Científico",
+        modoCiudadano: "Modo Cidadán",
+        estres: "ESTRÉS DE BIOMASA",
+        selecciona: "SELECCIONA UNHA ZONA FORESTAL",
+        datosEntrada: "> DATOS DE ENTRADA",
+        latlon: "LAT/LON",
+        temp: "TEMP (Q0)",
+        hum: "HUMIDADE (Q1)",
+        viento: "VENTO (Q2)",
+        direccion: "DIRECCIÓN DO VENTO",
+        nucleo: "> NÚCLEO CUÁNTICO (3 Qubits)",
+        incendios: "> LUMES ACTIVOS (FIRMS)",
+        cargando: "Cargando capa de lumes...",
+        avisoLegal: "Aviso Legal e Metodoloxía",
+        descargarPdf: "Descargar informe PDF",
+        chatTitulo: "Manolito · Asesor de Extinción",
+        chatPlaceholder: "Pregúntalle a Manolito sobre esta zona...",
+        chatSaludo: "Son Manolito. Dime coordenadas, vento ou unha zona e direiche onde actuar primeiro.",
+        propagacion: "> PROPAGACIÓN E ZONAS DE TRABALLO",
+        zonaSeguro: "Zona segura – estrés normal",
+        zonaAmbar: "Alerta preventiva – estrés moderado",
+        zonaRojo: "Polvorín crítico – risco inminente",
+        calculando: "CALCULANDO...",
+        zonaAgua: "ZONA DE AUGA",
+        zonaAguaMsg: "Non é posible calcular o estrés da biomasa forestal sobre a auga.",
+        simulacionNoIniciadaAgua: "> Simulación non iniciada (zona de auga).",
+        popupZonaAgua: "Zona de Auga",
+        errorDatosClima: "Erro ao obter datos meteorolóxicos. Verifique a conexión.",
+        ceroFuegosVisibles: "0 lumes visibles nesta zona",
+        fuegosActivosDetectados: "{count} lumes activos detectados",
+        errorFirms: "Erro ao conectar con FIRMS",
+        errorFirmsDev: "Amosando lumes de EXEMPLO (usa 'wrangler dev' para datos reais)",
+        popupIncendioActivo: "Lume activo (VIIRS)",
+        popupBrillo: "Brillo",
+        popupConfianza: "Confianza",
+        popupEvaluarRiesgo: "Avaliar risco cuántico",
+        tooltipPropagacion: "Zona estimada de propagación (segundo o vento actual)",
+        popupEstresBiomasa: "Estrés de Biomasa",
+        actionOptimo: "Biomasa en estado óptimo. Continúe coa vixilancia periódica da zona.",
+        actionRecomendada: "<strong>ACCIÓN RECOMENDADA:</strong> Solicite aos servizos forestais a revisión e limpeza preventiva desta franxa, priorizando cabeza e flancos segundo o vento.",
+        actionUrgente: "<strong>ACCIÓN URXENTE:</strong> Notifique a bombeiros/servizos forestais. Consulte o apartado de Propagación para as zonas prioritarias de traballo.",
+        logRyAplicadas: "> RY(θ) aplicadas.",
+        logCnotEjecutados: "> CNOT (0→2) e CNOT (2→1) executados. Variables entrelazadas.",
+        logMedicionEjecutada: "> Medición de Born executada. Colapso do estado.",
+        titleModoCiudadano: "Ocultar detalles técnicos",
+        titleModoCiencia: "Ver detalles técnicos da simulación",
+        titleColapsar: "Clic para expandir/colapsar",
+        errorCargaLegal: "Erro ao cargar o contido do aviso legal. Por favor, recargue a páxina.",
+        trabajoUrgenciaBaja: "vixilancia preventiva rutineira",
+        trabajoUrgenciaMedia: "traballo preventivo programado para os vindeiros días",
+        trabajoUrgenciaAlta: "intervención urxente, prioridade alta",
+        trabajoVientoFlojo: "vento frouxo: a propagación agardada sería moderada e relativamente predicible",
+        trabajoVientoModerado: "vento moderado-forte: a cabeza dun posible incendio avanzaría con velocidade significativa",
+        trabajoVientoFuerte: "vento forte: risco de comportamento errático, focos secundarios por faíscas e avance moi rápido na cabeza",
+        trabajoTexto: `Con vento procedente do {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendio neste punto avanzaría cara ao {cardAvance}. {intensidadViento}.\n\nPRIORIDADE 1 - CABEZA (dirección {cardAvance}): asegurar cortalumes e retirar biomasa na franxa situada a favor do vento; é a zona de maior velocidade de avance e de maior risco para persoas e estruturas.\n\nPRIORIDADE 2 - FLANCOS ({cardFlancoIzq} e {cardFlancoDer}): traballar estas franxas perpendiculares para evitar que o incendio "abra" e aumente a súa fronte activa.\n\nZONA DE MENOR PRIORIDADE INMEDIATA - COLA ({cardCola}, a barlovento): o avance do lume nesta dirección é moito máis lento; é a zona relativamente máis segura para manobras de apoio e puntos de control, aínda que non debe descoidarse.\n\nNivel recomendado de actuación: {urgencia}.`
     },
     en: {
-        calculando: "Calculating…",
-        zonaAgua: "WATER ZONE",
-        zonaAguaMsg: "This point is over a body of water. Biomass stress is not calculated here.",
-        simulacionNoIniciadaAgua: "Simulation not applicable: water zone.",
-        errorDatosClima: "Could not fetch weather data for this area. Please try again.",
-        popupZonaAgua: "Water zone",
-
-        logRyAplicadas: "RY gates applied",
-        logCnotEjecutados: "CNOT entanglement executed",
-        logMedicionEjecutada: "Measurement via Born rule executed",
-
-        zonaSeguro: "Calm zone",
-        actionOptimo: "Stable conditions. No priority action needed at this point.",
-        zonaAmbar: "Watch zone",
-        actionRecomendada: "Moderate-to-high biomass stress. Active monitoring and prevention recommended.",
-        zonaRojo: "Critical risk",
-        actionUrgente: "Critical biomass stress. Prioritize this zone for immediate prevention work.",
-
-        popupEstresBiomasa: "Biomass stress",
-
-        trabajoUrgenciaBaja: "low",
-        trabajoUrgenciaMedia: "medium",
-        trabajoUrgenciaAlta: "high",
-        trabajoVientoFlojo: "light wind",
-        trabajoVientoModerado: "moderate wind",
-        trabajoVientoFuerte: "strong wind",
-        trabajoTexto: "Wind is blowing from the {cardCola} ({windDirOrigen}°) at {windSpeed} km/h ({intensidadViento}). A fire at this point would tend to advance towards the {cardAvance}: prioritize the head strip in that direction and work the flanks towards the {cardFlancoIzq} and {cardFlancoDer}.\n\nIntervention urgency: {urgencia}.",
-        tooltipPropagacion: "Estimated spread cone",
-
-        ceroFuegosVisibles: "No active fires in this map area",
-        popupIncendioActivo: "Active fire (NASA FIRMS)",
+        titulo: "MANOLIT∞ FOREST",
+        subtitulo: "QUANTUM BIOMASS STRESS SIMULATOR AND FIRE SPREAD PREDICTION",
+        modoCientifico: "Scientific Mode",
+        modoCiudadano: "Citizen Mode",
+        estres: "BIOMASS STRESS",
+        selecciona: "SELECT A FOREST AREA",
+        datosEntrada: "> INPUT DATA",
+        latlon: "LAT/LON",
+        temp: "TEMP (Q0)",
+        hum: "HUMIDITY (Q1)",
+        viento: "WIND (Q2)",
+        direccion: "WIND DIRECTION",
+        nucleo: "> QUANTUM CORE (3 Qubits)",
+        incendios: "> ACTIVE FIRES (FIRMS)",
+        cargando: "Loading fire layer...",
+        avisoLegal: "Legal Notice and Methodology",
+        descargarPdf: "Download PDF report",
+        chatTitulo: "Manolito · Suppression Advisor",
+        chatPlaceholder: "Ask Manolito about this area...",
+        chatSaludo: "I'm Manolito. Give me coordinates, wind data or an area and I'll tell you where to act first.",
+        propagacion: "> SPREAD AND WORK ZONES",
+        zonaSeguro: "Safe zone – normal stress",
+        zonaAmbar: "Preventive alert – moderate stress",
+        zonaRojo: "Critical tinderbox – imminent risk",
+        calculando: "CALCULATING...",
+        zonaAgua: "WATER AREA",
+        zonaAguaMsg: "Cannot calculate forest biomass stress over water.",
+        simulacionNoIniciadaAgua: "> Simulation not started (water area).",
+        popupZonaAgua: "Water Area",
+        errorDatosClima: "Error fetching weather data. Please check your connection.",
+        ceroFuegosVisibles: "0 visible fires in this area",
+        fuegosActivosDetectados: "{count} active fires detected",
+        errorFirms: "Error connecting to FIRMS",
+        errorFirmsDev: "Showing EXAMPLE fires (use 'wrangler dev' for real data)",
+        popupIncendioActivo: "Active fire (VIIRS)",
         popupBrillo: "Brightness",
         popupConfianza: "Confidence",
-        popupEvaluarRiesgo: "Assess risk here",
-        fuegosActivosDetectados: "{count} active fires detected in this area",
-        errorFirmsDev: "Showing sample data (FIRMS unavailable right now)",
-
-        modoCientifico: "Scientific mode",
-        modoCiudadano: "Citizen mode",
-        titleModoCiencia: "Switch to scientific mode (full technical detail)",
-        titleModoCiudadano: "Switch to citizen mode (simplified reading)",
-        titleColapsar: "Click to collapse/expand",
-        errorCargaLegal: "Could not load the legal notice. Please reload the page.",
-
-        chatSaludo: "Hi! I'm Manolit∞ Click a point on the map and ask me anything about that area."
+        popupEvaluarRiesgo: "Evaluate quantum risk",
+        tooltipPropagacion: "Estimated spread zone (based on current wind)",
+        popupEstresBiomasa: "Biomass Stress",
+        actionOptimo: "Biomass in optimal condition. Continue periodic monitoring of the area.",
+        actionRecomendada: "<strong>RECOMMENDED ACTION:</strong> Request preventive review and clearing of this strip from forestry services, prioritizing head and flanks according to wind.",
+        actionUrgente: "<strong>URGENT ACTION:</strong> Notify fire department/forestry services. Consult the Spread section for priority work zones.",
+        logRyAplicadas: "> RY(θ) applied.",
+        logCnotEjecutados: "> CNOT (0→2) & CNOT (2→1) executed. Variables entangled.",
+        logMedicionEjecutada: "> Born measurement executed. State collapsed.",
+        titleModoCiudadano: "Hide technical details",
+        titleModoCiencia: "View technical simulation details",
+        titleColapsar: "Click to expand/collapse",
+        errorCargaLegal: "Error loading legal notice content. Please reload the page.",
+        trabajoUrgenciaBaja: "routine preventive surveillance",
+        trabajoUrgenciaMedia: "preventive work scheduled in the coming days",
+        trabajoUrgenciaAlta: "urgent intervention, high priority",
+        trabajoVientoFlojo: "light wind: expected spread would be moderate and relatively predictable",
+        trabajoVientoModerado: "moderate-strong wind: the head of a possible fire would advance with significant speed",
+        trabajoVientoFuerte: "strong wind: risk of erratic behavior, spot fires from embers, and very rapid head advance",
+        trabajoTexto: `With wind from {cardCola} ({windDirOrigen}°) at {windSpeed} km/h, a fire at this point would advance towards {cardAvance}. {intensidadViento}.\n\nPRIORITY 1 - HEAD (direction {cardAvance}): secure firebreaks and clear biomass in the downwind strip; this is the area of fastest advance and greatest risk to people and structures.\n\nPRIORITY 2 - FLANKS ({cardFlancoIzq} and {cardFlancoDer}): work these perpendicular strips to prevent the fire from "opening up" and increasing its active front.\n\nLOWER IMMEDIATE PRIORITY ZONE - TAIL ({cardCola}, upwind): fire spread in this direction is much slower; it is the relatively safer area for support maneuvers and control points, although it should not be neglected.\n\nRecommended level of action: {urgencia}.`
+    },
+    fr: {
+        titulo: "MANOLIT∞ FORESTAL",
+        subtitulo: "SIMULATEUR QUANTIQUE DE STRESS DE BIOMASSE ET PRÉVISION DE PROPAGATION",
+        modoCientifico: "Mode Scientifique",
+        modoCiudadano: "Mode Citoyen",
+        estres: "STRESS DE BIOMASSE",
+        selecciona: "SÉLECTIONNEZ UNE ZONE FORESTIÈRE",
+        datosEntrada: "> DONNÉES D'ENTRÉE",
+        latlon: "LAT/LON",
+        temp: "TEMP (Q0)",
+        hum: "HUMIDITÉ (Q1)",
+        viento: "VENT (Q2)",
+        direccion: "DIRECTION DU VENT",
+        nucleo: "> NOYAU QUANTIQUE (3 Qubits)",
+        incendios: "> INCENDIES ACTIFS (FIRMS)",
+        cargando: "Chargement de la couche incendies...",
+        avisoLegal: "Mentions Légales et Méthodologie",
+        descargarPdf: "Télécharger le rapport PDF",
+        chatTitulo: "Manolito · Conseiller Extinction",
+        chatPlaceholder: "Demandez à Manolito à propos de cette zone...",
+        chatSaludo: "Je suis Manolito. Donnez-moi des coordonnées, le vent ou une zone et je vous dirai où agir en premier.",
+        propagacion: "> PROPAGATION ET ZONES DE TRAVAIL",
+        zonaSeguro: "Zone sûre – stress normal",
+        zonaAmbar: "Alerte préventive – stress modéré",
+        zonaRojo: "Poudrière critique – risque imminent",
+        calculando: "CALCUL EN COURS...",
+        zonaAgua: "ZONE D'EAU",
+        zonaAguaMsg: "Impossible de calculer le stress de la biomasse forestière sur l'eau.",
+        simulacionNoIniciadaAgua: "> Simulation non démarrée (zone d'eau).",
+        popupZonaAgua: "Zone d'eau",
+        errorDatosClima: "Erreur lors de la récupération des données météorologiques. Vérifiez la connexion.",
+        ceroFuegosVisibles: "0 feux visibles dans cette zone",
+        fuegosActivosDetectados: "{count} feux actifs détectés",
+        errorFirms: "Erreur de connexion à FIRMS",
+        errorFirmsDev: "Affichage des feux d'EXEMPLE (utilisez 'wrangler dev' pour les données réelles)",
+        popupIncendioActivo: "Incendie actif (VIIRS)",
+        popupBrillo: "Luminosité",
+        popupConfianza: "Confiance",
+        popupEvaluarRiesgo: "Évaluer le risque quantique",
+        tooltipPropagacion: "Zone de propagation estimée (selon le vent actuel)",
+        popupEstresBiomasa: "Stress de la Biomasse",
+        actionOptimo: "Biomasse en état optimal. Poursuivre la surveillance périodique de la zone.",
+        actionRecomendada: "<strong>ACTION RECOMMANDÉE :</strong> Demander aux services forestiers la révision et le nettoyage préventif de cette bande, en priorisant la tête et les flancs selon le vent.",
+        actionUrgente: "<strong>ACTION URGENTE :</strong> Avertir les pompiers/services forestiers. Consulter la section Propagation pour les zones de travail prioritaires.",
+        logRyAplicadas: "> RY(θ) appliquées.",
+        logCnotEjecutados: "> CNOT (0→2) et CNOT (2→1) exécutés. Variables intriquées.",
+        logMedicionEjecutada: "> Mesure de Born exécutée. Effondrement de l'état.",
+        titleModoCiudadano: "Masquer les détails techniques",
+        titleModoCiencia: "Voir les détails techniques de la simulation",
+        titleColapsar: "Cliquer pour déplier/replier",
+        errorCargaLegal: "Erreur lors du chargement du contenu de l'avis légal. Veuillez recharger la page.",
+        trabajoUrgenciaBaja: "surveillance préventive de routine",
+        trabajoUrgenciaMedia: "travaux préventifs programmés dans les prochains jours",
+        trabajoUrgenciaAlta: "intervention urgente, haute priorité",
+        trabajoVientoFlojo: "vent faible : la propagation attendue serait modérée et relativement prévisible",
+        trabajoVientoModerado: "vent modéré à fort : la tête d'un éventuel incendie avancerait à une vitesse significative",
+        trabajoVientoFuerte: "vent fort : risque de comportement erratique, de foyers secondaires dus aux escarbilles et d'avancée très rapide en tête",
+        trabajoTexto: `Avec un vent venant de {cardCola} ({windDirOrigen}°) à {windSpeed} km/h, un incendie à ce point avancerait vers {cardAvance}. {intensidadViento}.\n\nPRIORITÉ 1 - TÊTE (direction {cardAvance}) : sécuriser les pare-feux et défricher la biomasse dans la bande sous le vent ; c'est la zone de plus grande vitesse de propagation et de plus grand risque pour les personnes et les structures.\n\nPRIORITÉ 2 - FLANCS ({cardFlancoIzq} et {cardFlancoDer}) : travailler ces bandes perpendiculaires pour empêcher l'incendie de "s'ouvrir" et d'augmenter son front actif.\n\nZONE DE PRIORITÉ IMMÉDIATE INFÉRIEURE - QUEUE ({cardCola}, au vent) : la progression du feu dans cette direction est beaucoup plus lente ; c'est la zone relativement la plus sûre pour les manœuvres de soutien et les points de contrôle, bien qu'elle ne doive pas être négligée.\n\nNiveau d'action recommandé : {urgencia}.`
     }
 };
 
 let idiomaActual = localStorage.getItem('manolitoIdioma') || 'es';
-window.idiomaActual = idiomaActual;
 
-function t(clave, variables) {
-    const dict = TRADUCCIONES[idiomaActual] || TRADUCCIONES.es;
-    let texto = dict[clave] !== undefined ? dict[clave] : (TRADUCCIONES.es[clave] !== undefined ? TRADUCCIONES.es[clave] : clave);
-    if (variables) {
-        Object.keys(variables).forEach(k => {
-            texto = texto.split(`{${k}}`).join(variables[k]);
-        });
+function t(clave, interpolaciones = {}) {
+    let texto = (IDIOMAS[idiomaActual] && IDIOMAS[idiomaActual][clave]) || IDIOMAS.es[clave] || clave;
+    for (const k in interpolaciones) {
+        texto = texto.replace(new RegExp(`\\{${k}\\}`, 'g'), interpolaciones[k]);
     }
     return texto;
 }
 
-function cambiarIdioma(nuevo) {
-    if (!TRADUCCIONES[nuevo]) return;
-    localStorage.setItem('manolitoIdioma', nuevo);
-    location.reload();
+function aplicarIdioma() {
+    document.documentElement.lang = idiomaActual;
+    const mapa = {
+        'ui-titulo-span': null, // el h1 se maneja aparte por el <span>
+    };
+    const setText = (id, clave) => { const el = document.getElementById(id); if (el) el.textContent = t(clave); };
+
+    setText('ui-subtitle', 'subtitulo');
+    setText('ui-datos-entrada-h2', 'datosEntrada');
+    setText('ui-label-latlon', 'latlon');
+    setText('ui-label-temp', 'temp');
+    setText('ui-label-hum', 'hum');
+    setText('ui-label-viento', 'viento');
+    setText('ui-label-direccion', 'direccion');
+    setText('ui-nucleo-h2', 'nucleo');
+    setText('ui-incendios-h2', 'incendios');
+    setText('contador-fuegos', 'cargando');
+    setText('open-legal-link', 'avisoLegal');
+    setText('btn-descargar-pdf', 'descargarPdf');
+    setText('manolito-chat-titulo', 'chatTitulo');
+    setText('ui-propagacion-h2', 'propagacion');
+
+    const percentPlaceholder = document.getElementById('ui-alert');
+    if (percentPlaceholder && percentPlaceholder.dataset.estado === 'inicial') {
+        percentPlaceholder.textContent = t('selecciona');
+    }
+
+    const toggleModeBtn = document.getElementById('toggle-mode');
+    if (toggleModeBtn) {
+        const dashboard = document.getElementById('dashboard');
+        const esCiudadano = dashboard && dashboard.classList.contains('mode-citizen');
+        toggleModeBtn.textContent = esCiudadano ? t('modoCientifico') : t('modoCiudadano');
+    }
+
+    const chatInput = document.getElementById('manolito-input');
+    if (chatInput) chatInput.placeholder = t('chatPlaceholder');
+
+    const selector = document.getElementById('selector-idioma');
+    if (selector) selector.value = idiomaActual;
+}
+
+function cambiarIdioma(nuevoIdioma) {
+    if (!IDIOMAS[nuevoIdioma]) return;
+    idiomaActual = nuevoIdioma;
+    localStorage.setItem('manolitoIdioma', nuevoIdioma);
+    aplicarIdioma();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const selector = document.getElementById('language-select');
+    const selector = document.getElementById('selector-idioma');
     if (selector) {
         selector.value = idiomaActual;
         selector.addEventListener('change', (e) => cambiarIdioma(e.target.value));
     }
+    aplicarIdioma();
 });
