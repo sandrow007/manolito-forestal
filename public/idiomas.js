@@ -50,7 +50,7 @@ const TRADUCCIONES = {
         titleColapsar: "Pulsa para colapsar/expandir",
         errorCargaLegal: "No se pudo cargar el aviso legal. Recarga la página.",
 
-        chatSaludo: "¡Hola! Soy Manolito 🌲 Pincha un punto en el mapa y pregúntame lo que quieras sobre esa zona."
+        chatSaludo: "¡Hola! Soy Manolit∞ Pincha un punto en el mapa y pregúntame lo que quieras sobre esa zona."
     },
     en: {
         calculando: "Calculating…",
@@ -97,7 +97,7 @@ const TRADUCCIONES = {
         titleColapsar: "Click to collapse/expand",
         errorCargaLegal: "Could not load the legal notice. Please reload the page.",
 
-        chatSaludo: "Hi! I'm Manolito 🌲 Click a point on the map and ask me anything about that area."
+        chatSaludo: "Hi! I'm Manolit∞ Click a point on the map and ask me anything about that area."
     }
 };
 
