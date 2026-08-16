@@ -11,7 +11,6 @@ async function obtenerNombreLugar(lat, lon) {
     try {
         // Esta es la dirección correcta y arreglada
         const url = `https://openstreetmap.org{lat}&lon=${lon}&accept-language=es&zoom=10`;
-        
         const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
         if (!resp.ok) return null;
         const data = await resp.json();
