@@ -84,14 +84,14 @@ function generarInformePDF(contexto) {
 
         let tamanoLetra = 11;
         doc.setFontSize(tamanoLetra);
-        while (doc.getTextWidth(textoAviso) > 172 && tamanoLetra > 7) {
+        while (doc.getTextWidth(textoAviso) > 170 && tamanoLetra > 6) {
             tamanoLetra -= 0.5;
             doc.setFontSize(tamanoLetra);
         }
 
-        doc.text(textoAviso, 19, y + 1);
+        doc.text(textoAviso, 15, y + 1);
         doc.setTextColor(0, 0, 0);
-        y += 14;
+        y += 12;
     }
 
     const COL_VALOR_MIN = 68;
