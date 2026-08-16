@@ -345,7 +345,7 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
     const perimetroEstimado = evaluarPerimetroParaPunto(lat, lon);
     let textoRecomendacionFinal = recomendacion ? recomendacion.texto : actionText.replace(/<[^>]+>/g, '');
     if (perimetroEstimado && perimetroEstimado.dentro) {
-        const avisoPerimetro = `⚠️ ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n${textoRecomendacionFinal}`;
+        const avisoPerimetro = `⚠ ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n${textoRecomendacionFinal}`;
         textoRecomendacionFinal = avisoPerimetro;
         if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = avisoPerimetro.replace(/\n/g, '<br><br>');
     }
@@ -808,36 +808,20 @@ function setupUIInteractions() {
         this.style.display = 'none';
     });
 
-    // CONTROL DE MODO: Ocultar y mostrar registro según el modo activo usando tu objeto DOM
     if (DOM.toggleModeBtn) {
         DOM.toggleModeBtn.addEventListener('click', function () {
             DOM.dashboard.classList.toggle('mode-citizen');
             const isCitizenMode = DOM.dashboard.classList.contains('mode-citizen');
-
-            // Cambiar textos dinámicos usando tu traductor t() existente
             this.textContent = isCitizenMode ? t('modoCientifico') : t('modoCiudadano');
             this.title = isCitizenMode ? t('titleModoCiencia') : t('titleModoCiudadano');
-
-            // Lógica: Si está en modo ciudadano se oculta la sección cuántica, si no, se muestra
-            if (DOM.quantumLogSection) {
-                DOM.quantumLogSection.style.display = isCitizenMode ? 'none' : 'block';
-            }
         });
     }
 
-    // INTERACTIVIDAD DEL CLIC EN EL TÍTULO: Desplegar y colapsar la persiana cuántica
     if (DOM.quantumLogSection) {
         const logHeader = DOM.quantumLogSection.querySelector('h2');
         if (logHeader) {
             logHeader.addEventListener('click', () => {
                 DOM.quantumLogSection.classList.toggle('section-collapsed');
-
-                // Cambiar la flechita del título para que sea dinámica en pantalla sin caracteres raros
-                if (DOM.quantumLogSection.classList.contains('section-collapsed')) {
-                    logHeader.innerHTML = "Registro cuántico >";
-                } else {
-                    logHeader.innerHTML = "Registro cuántico v";
-                }
             });
             logHeader.style.cursor = 'pointer';
             logHeader.title = t('titleColapsar');
@@ -861,13 +845,38 @@ function setupUIInteractions() {
     map.on('load moveend zoomend', cargarFuegosActivos);
 }
 
+async function initLegalNotice() {
+    const hideModal = () => { DOM.legalModal.style.display = 'none'; };
+    const showModal = () => { DOM.legalModal.style.display = 'flex'; };
+
+    try {
+        const response = await fetch('legal.html');
+        if (!response.ok) throw new Error('No se pudo cargar el aviso legal.');
+        const legalHTML = await response.text();
+        DOM.legalContentContainer.innerHTML = legalHTML;
+    } catch (error) {
+        console.error(error);
+        DOM.legalContentContainer.innerHTML = `<p>${t('errorCargaLegal')}</p>`;
+    }
+
+    DOM.acceptLegalBtn.addEventListener('click', () => {
+        localStorage.setItem('manolitoLegalAccepted', 'true');
+        hideModal();
+    });
+    DOM.modalCloseBtn.addEventListener('click', hideModal);
+    DOM.openLegalLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showModal();
+    });
+
+    if (localStorage.getItem('manolitoLegalAccepted') !== 'true') {
+        showModal();
+    }
+}
+
 // 9. INICIO DE LA APLICACIÓN
 document.addEventListener('DOMContentLoaded', () => {
     if (DOM.uiAlert) DOM.uiAlert.dataset.estado = 'inicial';
-
-    // Forzar que empiece oculto al abrir la web por primera vez
-    if (DOM.quantumLogSection) DOM.quantumLogSection.style.display = 'none';
-
     initLegalNotice();
     setupUIInteractions();
     cargarFuegosActivos();
