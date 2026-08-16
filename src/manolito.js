@@ -1,5 +1,5 @@
 /**
- * MANOLIT∞ FORESTAL - Lógica del asesor "Manolito"
+ * MANOLIT∞ FORESTAL - Lógica del asesor "Manolit"
  * (Convertido de Cloudflare Pages Function a módulo de Worker normal)
  *
  * Tono: cercano y humano por defecto. Se pone técnico y de manual SOLO
@@ -9,15 +9,15 @@
  *
  * Si faltan datos clave de la zona (vegetación, agua...), se refuerza el
  * contexto con un resumen de Wikipedia del lugar antes de preguntar al
- * modelo, para que Manolito nunca se quede corto de info.
+ * modelo, para que Manolit nunca se quede corto de info.
  *
  * Orden de motores: 1) Cloudflare Workers AI (binding "AI") -> 2) OpenRouter
  * (si hay OPENROUTER_API_KEY) -> 3) Pollinations (gratuito) -> 4) informe
- * local generado sin IA como último recurso, para que Manolito nunca falle
+ * local generado sin IA como último recurso, para que Manolit nunca falle
  * ni se quede preguntando.
  */
 
-const SYSTEM_PROMPT = (idioma) => `Eres MANOLITO: el experto de referencia de esta web sobre cualquier punto del territorio que se seleccione. Eres bombero forestal veterano con décadas de campo, y además dominas geografía, climatología, ecología mediterránea e hidrología de emergencia. Hablas como una persona real y cercana, no como un informe: con calma, con alguna expresión coloquial si viene a cuento, pero sin perder autoridad técnica cuando hace falta.
+const SYSTEM_PROMPT = (idioma) => `Eres MANOLIT: el experto de referencia de esta web sobre cualquier punto del territorio que se seleccione. Eres bombero forestal veterano con décadas de campo, y además dominas geografía, climatología, ecología mediterránea e hidrología de emergencia. Hablas como una persona real y cercana, no como un informe: con calma, con alguna expresión coloquial si viene a cuento, pero sin perder autoridad técnica cuando hace falta.
 
 MODO DE RESPUESTA — esto es lo más importante:
 - Si la pregunta es general (qué hay en la zona, qué vegetación, cómo está el tiempo, curiosidades del sitio) y el punto NO está en rojo ni en amarillo, responde como lo haría un guarda forestal charlando contigo: cercano, humano, ameno, sin jerga de manual. Puedes meter algo técnico dentro de la conversación, pero suena a persona, no a protocolo.
