@@ -68,7 +68,8 @@ function generarInformePDF(contexto) {
     let y = 42;
     if (estado.color !== 'verde') {
         doc.setFillColor(...estado.rgb);
-        doc.roundedRect(15, y - 6, 180, 10, 1.5, 1.5, 'F');
+        // Ajustamos el alto del rectángulo a 12 para que no corte las letras
+        doc.roundedRect(15, y - 6, 180, 12, 1.5, 1.5, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
@@ -80,10 +81,10 @@ function generarInformePDF(contexto) {
         } else {
             textoAviso = `⚠ ${estado.etiqueta} — sin incendio confirmado, zona bajo vigilancia`;
         }
-        // Corregido a y - 1 para que el texto se centre verticalmente dentro del rectángulo rojo al imprimir
-        doc.text(textoAviso, 20, y - 1);
+        // Usamos y + 2 para que el texto quede perfectamente centrado dentro del rectángulo y no se oculte
+        doc.text(textoAviso, 20, y + 2);
         doc.setTextColor(0, 0, 0);
-        y += 14;
+        y += 16;
     }
 
 
@@ -121,7 +122,7 @@ function generarInformePDF(contexto) {
 
     // Perímetro estimado de incendio activo (calculado a partir de los
     // puntos de calor FIRMS agrupados). Solo se muestra si hay datos.
-    if (contexto.perimetroEstimado) {
+    if (contexto.perimetroEstimated || contexto.perimetroEstimado) {
         const p = contexto.perimetroEstimado;
         if (p.dentro) {
             linea('Perímetro estimado de incendio', `dentro del perímetro (foco de ~${p.areaHa.toFixed(1)} ha)`, [200, 30, 30]);
