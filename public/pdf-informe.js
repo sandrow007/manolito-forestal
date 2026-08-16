@@ -80,10 +80,12 @@ function generarInformePDF(contexto) {
         } else {
             textoAviso = `⚠ ${estado.etiqueta} — sin incendio confirmado, zona bajo vigilancia`;
         }
-        doc.text(textoAviso, 20, y + 1);
+        // Corregido a y - 1 para que el texto se centre verticalmente dentro del rectángulo rojo al imprimir
+        doc.text(textoAviso, 20, y - 1);
         doc.setTextColor(0, 0, 0);
         y += 14;
     }
+
 
     // Etiqueta:valor con el ancho de la etiqueta calculado en cada línea,
     // para que ninguna etiqueta larga (p. ej. "Estrés de biomasa (modelo
