@@ -246,6 +246,27 @@ function calcularZonasDeTrabajo(windDirOrigen, windSpeed, pct) {
     return { texto, azAvance, azFlancoDer, azFlancoIzq, azCola, cardAvance, cardFlancoDer, cardFlancoIzq, cardCola };
 }
 
+// Identifica el nombre real (pueblo, aldea, ciudad...) más cercano a cada
+// zona de trabajo (cabeza y flancos), no solo el punto de clic. Usa la misma
+// geocodificación inversa que ya se usa para el punto principal.
+async function obtenerNombresZonasTrabajo(lat, lon, azAvance, azFlancoIzq, azFlancoDer, distanciaKm) {
+    const puntoAvance = destinoDesdeAzimut(lat, lon, azAvance, distanciaKm);
+    const puntoFlancoIzq = destinoDesdeAzimut(lat, lon, azFlancoIzq, distanciaKm * 0.7);
+    const puntoFlancoDer = destinoDesdeAzimut(lat, lon, azFlancoDer, distanciaKm * 0.7);
+
+    const [nombreAvance, nombreFlancoIzq, nombreFlancoDer] = await Promise.all([
+        obtenerNombreLugar(puntoAvance[0], puntoAvance[1]),
+        obtenerNombreLugar(puntoFlancoIzq[0], puntoFlancoIzq[1]),
+        obtenerNombreLugar(puntoFlancoDer[0], puntoFlancoDer[1])
+    ]);
+
+    return {
+        avance: { nombre: nombreAvance, lat: puntoAvance[0], lon: puntoAvance[1] },
+        flancoIzq: { nombre: nombreFlancoIzq, lat: puntoFlancoIzq[0], lon: puntoFlancoIzq[1] },
+        flancoDer: { nombre: nombreFlancoDer, lat: puntoFlancoDer[0], lon: puntoFlancoDer[1] }
+    };
+}
+
 function dibujarPropagacion(lat, lon, windDirOrigen, windSpeed, colorHex) {
     if (flechaViento) map.removeLayer(flechaViento);
     if (conoPropagacion) map.removeLayer(conoPropagacion);
@@ -341,10 +362,44 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
     DOM.uiAction.innerHTML = actionText;
 
     let recomendacion = null;
+    let zonasPrioritarias = null;
     if (typeof windDir === 'number' && !isNaN(windDir)) {
         recomendacion = calcularZonasDeTrabajo(windDir, wind, pct);
-        if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = recomendacion.texto.replace(/\n/g, '<br><br>');
         dibujarPropagacion(lat, lon, windDir, wind, colorHex);
+
+        // Coordenadas concretas de cada zona prioritaria, no solo el cardinal
+        const distKm = Math.min(8, 1.5 + wind / 8);
+        const [latCab, lonCab] = destinoDesdeAzimut(lat, lon, recomendacion.azAvance, distKm);
+        const [latFD, lonFD] = destinoDesdeAzimut(lat, lon, recomendacion.azFlancoDer, distKm * 0.6);
+        const [latFI, lonFI] = destinoDesdeAzimut(lat, lon, recomendacion.azFlancoIzq, distKm * 0.6);
+        zonasPrioritarias = {
+            cabeza: { lat: latCab, lon: lonCab, lugar: null },
+            flancoDer: { lat: latFD, lon: lonFD, lugar: null },
+            flancoIzq: { lat: latFI, lon: lonFI, lugar: null }
+        };
+
+        const textoCoords = `\n\nPuntos concretos a asegurar:\n• Cabeza (avance): ${latCab.toFixed(5)}, ${lonCab.toFixed(5)}\n• Flanco derecho: ${latFD.toFixed(5)}, ${lonFD.toFixed(5)}\n• Flanco izquierdo: ${latFI.toFixed(5)}, ${lonFI.toFixed(5)}`;
+        if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = (recomendacion.texto + textoCoords).replace(/\n/g, '<br><br>');
+
+        // En paralelo, se busca el nombre del lugar de cada punto (pueblo,
+        // aldea, ciudad) y se actualiza el panel y el contexto en cuanto
+        // llega, sin bloquear la evaluación inicial.
+        Promise.all([
+            obtenerNombreLugar(latCab, lonCab),
+            obtenerNombreLugar(latFD, lonFD),
+            obtenerNombreLugar(latFI, lonFI)
+        ]).then(([nombreCab, nombreFD, nombreFI]) => {
+            if (!window.ultimoContextoManolito || window.ultimoContextoManolito.lat !== lat || window.ultimoContextoManolito.lon !== lon) return;
+            window.ultimoContextoManolito.zonasPrioritarias.cabeza.lugar = nombreCab;
+            window.ultimoContextoManolito.zonasPrioritarias.flancoDer.lugar = nombreFD;
+            window.ultimoContextoManolito.zonasPrioritarias.flancoIzq.lugar = nombreFI;
+            const textoConNombres = `\n\nPuntos concretos a asegurar:\n• Cabeza (avance): ${nombreCab || 'lugar no identificado'} (${latCab.toFixed(5)}, ${lonCab.toFixed(5)})\n• Flanco derecho: ${nombreFD || 'lugar no identificado'} (${latFD.toFixed(5)}, ${lonFD.toFixed(5)})\n• Flanco izquierdo: ${nombreFI || 'lugar no identificado'} (${latFI.toFixed(5)}, ${lonFI.toFixed(5)})`;
+            const prefijoPerimetro = (window.ultimoContextoManolito.perimetroEstimado && window.ultimoContextoManolito.perimetroEstimado.dentro)
+                ? `⚠ ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${window.ultimoContextoManolito.perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n`
+                : '';
+            window.ultimoContextoManolito.recomendacionTexto = prefijoPerimetro + recomendacion.texto + textoConNombres;
+            if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = (prefijoPerimetro + recomendacion.texto + textoConNombres).replace(/\n/g, '<br><br>');
+        }).catch(() => {});
     }
 
     const perimetroEstimado = evaluarPerimetroParaPunto(lat, lon);
@@ -366,6 +421,7 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
         vegetacion: null,
         aguaCercana: null,
         perimetroEstimado,
+        zonasPrioritarias,
         recomendacionTexto: textoRecomendacionFinal
     };
 }
