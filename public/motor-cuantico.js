@@ -808,20 +808,36 @@ function setupUIInteractions() {
         this.style.display = 'none';
     });
 
+    // CONTROL DE MODO: Ocultar y mostrar registro según modo activo
     if (DOM.toggleModeBtn) {
         DOM.toggleModeBtn.addEventListener('click', function () {
             DOM.dashboard.classList.toggle('mode-citizen');
             const isCitizenMode = DOM.dashboard.classList.contains('mode-citizen');
+            
+            // Cambiar textos dinámicos usando tu función t()
             this.textContent = isCitizenMode ? t('modoCientifico') : t('modoCiudadano');
             this.title = isCitizenMode ? t('titleModoCiencia') : t('titleModoCiudadano');
+
+            // Lógica añadida: Si es modo ciudadano se oculta la sección cuántica, si no, se muestra
+            if (DOM.quantumLogSection) {
+                DOM.quantumLogSection.style.display = isCitizenMode ? 'none' : 'block';
+            }
         });
     }
 
+    // INTERACTIVIDAD DEL CLIC: Desplegar y colapsar el menú cuántico
     if (DOM.quantumLogSection) {
         const logHeader = DOM.quantumLogSection.querySelector('h2');
         if (logHeader) {
             logHeader.addEventListener('click', () => {
                 DOM.quantumLogSection.classList.toggle('section-collapsed');
+                
+                // Extra: Alternar la flechita del título para que sea interactiva
+                if (DOM.quantumLogSection.classList.contains('section-collapsed')) {
+                    logHeader.innerHTML = "Registro cuántico ▸";
+                } else {
+                    logHeader.innerHTML = "Registro cuántico ▾";
+                }
             });
             logHeader.style.cursor = 'pointer';
             logHeader.title = t('titleColapsar');
@@ -844,69 +860,14 @@ function setupUIInteractions() {
 
     map.on('load moveend zoomend', cargarFuegosActivos);
 }
-
-async function initLegalNotice() {
-    const hideModal = () => { DOM.legalModal.style.display = 'none'; };
-    const showModal = () => { DOM.legalModal.style.display = 'flex'; };
-
-    try {
-        const response = await fetch('legal.html');
-        if (!response.ok) throw new Error('No se pudo cargar el aviso legal.');
-        const legalHTML = await response.text();
-        DOM.legalContentContainer.innerHTML = legalHTML;
-    } catch (error) {
-        console.error(error);
-        DOM.legalContentContainer.innerHTML = `<p>${t('errorCargaLegal')}</p>`;
-    }
-
-    DOM.acceptLegalBtn.addEventListener('click', () => {
-        localStorage.setItem('manolitoLegalAccepted', 'true');
-        hideModal();
-    });
-    DOM.modalCloseBtn.addEventListener('click', hideModal);
-    DOM.openLegalLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        showModal();
-    });
-
-    if (localStorage.getItem('manolitoLegalAccepted') !== 'true') {
-        showModal();
-    }
-}
-
 // 9. INICIO DE LA APLICACIÓN
 document.addEventListener('DOMContentLoaded', () => {
     if (DOM.uiAlert) DOM.uiAlert.dataset.estado = 'inicial';
+    
+    // Forzar que empiece oculto al abrir la web por primera vez
+    if (DOM.quantumLogSection) DOM.quantumLogSection.style.display = 'none';
+
     initLegalNotice();
     setupUIInteractions();
     cargarFuegosActivos();
-});
-// Capturar los elementos reales de tu interfaz
-const seccionQuantum = document.getElementById('quantum-log-section');
-const botonModo = document.getElementById('toggle-mode');
-const tituloQuantum = document.querySelector('#quantum-log-section h2');
-
-// 1. Mostrar el bloque SOLO si está en modo científico
-botonModo.addEventListener('click', function() {
-    // Revisamos tu HTML para ver si el botón dice Modo científico
-    if (this.innerText === "Modo científico") {
-        this.innerText = "Modo ciudadano"; // Cambias a la otra vista
-        seccionQuantum.style.display = 'block'; // Se vuelve visible para el científico
-    } else {
-        this.innerText = "Modo científico"; // Vuelves a la vista por defecto
-        seccionQuantum.style.display = 'none'; // Se oculta por completo para el ciudadano
-    }
-});
-
-// 2. Hacer interactivo el clic sobre el título "Registro cuántico"
-tituloQuantum.addEventListener('click', function() {
-    // Intercambiamos la clase que ya declaraste en tus estilos CSS
-    seccionQuantum.classList.toggle('section-collapsed');
-    
-    // Cambiamos el indicador visual de la flecha según corresponda
-    if (seccionQuantum.classList.contains('section-collapsed')) {
-        this.innerHTML = "Registro cuántico ▸";
-    } else {
-        this.innerHTML = "Registro cuántico ▾";
-    }
 });

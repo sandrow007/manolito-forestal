@@ -124,17 +124,24 @@
         border-left: 2px solid var(--red); padding-left: 8px;
     }
 
-    /* ---------- Log cuántico ---------- */
-    #quantum-log-section { border-top: 1px solid var(--panel-border); padding-top: 12px; margin-bottom: 14px; }
+       /* ---------- Log cuántico ---------- */
+    #quantum-log-section { 
+        display: none; /* ← Esto oculta el registro al iniciar la web */
+        border-top: 1px solid var(--panel-border); 
+        padding-top: 12px; 
+        margin-bottom: 14px; 
+    }
     #quantum-log-section h2 {
         font-size: 0.85rem; margin: 0 0 8px 0; color: var(--cyan);
         display: flex; justify-content: space-between; align-items: center;
+        cursor: pointer; /* ← Esto añade la manita al pasar el ratón por encima */
     }
     #quantum-log-section .log-line {
         font-size: 0.7rem; color: var(--text-muted); line-height: 1.6;
         margin-bottom: 6px; overflow-wrap: break-word;
     }
     #quantum-log-section.section-collapsed .log-line { display: none; }
+
 
     .btn-primary {
         width: 100%; padding: 10px; border-radius: 8px; border: none;
