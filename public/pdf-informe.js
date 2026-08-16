@@ -2,8 +2,9 @@
  * MANOLIT∞ FORESTAL - Generador de informe PDF
  * Usa jsPDF (cargado por CDN en index.html) para exportar un informe
  * técnico descargable con coordenadas, lugar aproximado, datos
- * meteorológicos, % de estrés, estado del punto (rojo/amarillo/verde)
- * y recomendación de zonas de trabajo.
+ * meteorológicos, % de estrés, estado del punto (rojo/amarillo/verde),
+ * situación respecto al perímetro estimado de incendio activo, y
+ * recomendación de zonas de trabajo.
  */
 
 async function obtenerNombreLugar(lat, lon) {
@@ -25,10 +26,11 @@ async function obtenerNombreLugar(lat, lon) {
 }
 
 // Mismo criterio que en el chat: rojo = incendio activo confirmado por
-// satélite; amarillo = sin fuego confirmado pero estrés de biomasa alto;
-// verde = riesgo bajo-moderado. Se usa para el aviso del 112 en el PDF.
+// satélite o punto dentro del perímetro estimado; amarillo = sin fuego
+// confirmado pero estrés de biomasa alto; verde = riesgo bajo-moderado.
+// Se usa para el aviso del 112 en el PDF.
 function determinarEstadoPunto(c) {
-    if (c.incendiosActivosCercanos > 0) {
+    if (c.incendiosActivosCercanos > 0 || (c.perimetroEstimado && c.perimetroEstimado.dentro)) {
         return { color: 'rojo', etiqueta: 'INCENDIO ACTIVO', rgb: [200, 30, 30] };
     }
     const pct = parseFloat(c.pct);
@@ -70,9 +72,14 @@ function generarInformePDF(contexto) {
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
-        const textoAviso = estado.color === 'rojo'
-            ? `⚠ ${estado.etiqueta} — si estás cerca de la zona, aléjate. Emergencias: 112`
-            : `⚠ ${estado.etiqueta} — sin incendio confirmado, zona bajo vigilancia`;
+        let textoAviso;
+        if (contexto.perimetroEstimado && contexto.perimetroEstimado.dentro) {
+            textoAviso = `⚠ ${estado.etiqueta} — DENTRO del perímetro estimado. Aléjate. Emergencias: 112`;
+        } else if (estado.color === 'rojo') {
+            textoAviso = `⚠ ${estado.etiqueta} — si estás cerca de la zona, aléjate. Emergencias: 112`;
+        } else {
+            textoAviso = `⚠ ${estado.etiqueta} — sin incendio confirmado, zona bajo vigilancia`;
+        }
         doc.text(textoAviso, 20, y + 1);
         doc.setTextColor(0, 0, 0);
         y += 14;
@@ -110,6 +117,17 @@ function generarInformePDF(contexto) {
             : 'ninguno detectado');
     }
 
+    // Perímetro estimado de incendio activo (calculado a partir de los
+    // puntos de calor FIRMS agrupados). Solo se muestra si hay datos.
+    if (contexto.perimetroEstimado) {
+        const p = contexto.perimetroEstimado;
+        if (p.dentro) {
+            linea('Perímetro estimado de incendio', `dentro del perímetro (foco de ~${p.areaHa.toFixed(1)} ha)`, [200, 30, 30]);
+        } else {
+            linea('Perímetro estimado más cercano', `a ${p.distanciaKm.toFixed(1)} km (foco de ~${p.areaHa.toFixed(1)} ha)`);
+        }
+    }
+
     y += 4;
     doc.setDrawColor(200);
     doc.line(15, y, 195, y);
@@ -130,8 +148,8 @@ function generarInformePDF(contexto) {
     doc.setFontSize(8.5);
     doc.setTextColor(120);
     const nota = estado.color === 'rojo'
-        ? 'Este informe es un modelo de apoyo a la decisión basado en datos meteorológicos abiertos (Open-Meteo), satélite de incendios (NASA FIRMS) y una simulación de circuito cuántico ejecutada en el navegador. No sustituye las órdenes de mando de bomberos, Protección Civil, AEMET ni al 112. Hay indicios de incendio activo en esta zona: ante cualquier duda, contacta con el 112 o con Protección Civil/bomberos.'
-        : 'Este informe es un modelo de apoyo a la decisión basado en datos meteorológicos abiertos (Open-Meteo) y una simulación de circuito cuántico ejecutada en el navegador. No sustituye las órdenes de mando de bomberos, Protección Civil, AEMET ni al 112. Ante un incendio activo, contacta siempre con el 112.';
+        ? 'Este informe es un modelo de apoyo a la decisión basado en datos meteorológicos abiertos (Open-Meteo), satélite de incendios (NASA FIRMS) y una simulación de circuito cuántico ejecutada en el navegador. El perímetro estimado es una aproximación geométrica calculada a partir de los puntos de calor detectados y NO es un dato oficial verificado sobre el terreno. No sustituye las órdenes de mando de bomberos, Protección Civil, AEMET ni al 112. Hay indicios de incendio activo en esta zona: ante cualquier duda, contacta con el 112 o con Protección Civil/bomberos.'
+        : 'Este informe es un modelo de apoyo a la decisión basado en datos meteorológicos abiertos (Open-Meteo) y una simulación de circuito cuántico ejecutada en el navegador. El perímetro estimado, cuando aparece, es una aproximación geométrica calculada a partir de los puntos de calor detectados y NO es un dato oficial verificado sobre el terreno. No sustituye las órdenes de mando de bomberos, Protección Civil, AEMET ni al 112. Ante un incendio activo, contacta siempre con el 112.';
     const lineasNota = doc.splitTextToSize(nota, 180);
     doc.text(lineasNota, 15, y);
 

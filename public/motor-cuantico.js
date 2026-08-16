@@ -342,6 +342,14 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
         dibujarPropagacion(lat, lon, windDir, wind, colorHex);
     }
 
+    const perimetroEstimado = evaluarPerimetroParaPunto(lat, lon);
+    let textoRecomendacionFinal = recomendacion ? recomendacion.texto : actionText.replace(/<[^>]+>/g, '');
+    if (perimetroEstimado && perimetroEstimado.dentro) {
+        const avisoPerimetro = `⚠ ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n${textoRecomendacionFinal}`;
+        textoRecomendacionFinal = avisoPerimetro;
+        if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = avisoPerimetro.replace(/\n/g, '<br><br>');
+    }
+
     window.ultimoContextoManolito = {
         lat, lon, temp, hum, wind,
         windDir: windDir,
@@ -352,7 +360,8 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
         esDia: (typeof esDia === 'boolean') ? esDia : null,
         vegetacion: null,
         aguaCercana: null,
-        recomendacionTexto: recomendacion ? recomendacion.texto : actionText.replace(/<[^>]+>/g, '')
+        perimetroEstimado,
+        recomendacionTexto: textoRecomendacionFinal
     };
 }
 
@@ -600,8 +609,67 @@ function expandirDesdeCentroide(puntos, factor = 1.3) {
     return puntos.map(p => [lat0 + (p.lat - lat0) * factor, lon0 + (p.lon - lon0) * factor]);
 }
 
+function areaPoligonoHa(coordsLatLon) {
+    if (coordsLatLon.length < 3) return 0;
+    const lat0 = coordsLatLon.reduce((s, c) => s + c[0], 0) / coordsLatLon.length;
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
+    const pts = coordsLatLon.map(([lat, lon]) => {
+        const x = toRad(lon) * R * Math.cos(toRad(lat0));
+        const y = toRad(lat) * R;
+        return [x, y];
+    });
+    let area = 0;
+    for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i];
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        area += x1 * y2 - x2 * y1;
+    }
+    return Math.abs(area) / 2 / 10000; // m² -> ha
+}
+
+function puntoDentroPoligono(lat, lon, coordsLatLon) {
+    let dentro = false;
+    for (let i = 0, j = coordsLatLon.length - 1; i < coordsLatLon.length; j = i++) {
+        const [latI, lonI] = coordsLatLon[i];
+        const [latJ, lonJ] = coordsLatLon[j];
+        const interseca = ((latI > lat) !== (latJ > lat)) &&
+            (lon < (lonJ - lonI) * (lat - latI) / (latJ - latI) + lonI);
+        if (interseca) dentro = !dentro;
+    }
+    return dentro;
+}
+
+// Guarda la geometría de todos los perímetros activos dibujados, para poder
+// consultar luego si un punto cualquiera cae dentro de alguno o a qué
+// distancia está del más cercano (lo usa el informe y la recomendación).
+window.perimetrosActivosGeom = [];
+
+// Dado un punto, dice si está DENTRO de un perímetro activo estimado, o a
+// qué distancia (km) está del más cercano, y el área aproximada (ha) de ese foco.
+function evaluarPerimetroParaPunto(lat, lon) {
+    if (!window.perimetrosActivosGeom || !window.perimetrosActivosGeom.length) return null;
+    let mejor = null;
+    for (const geom of window.perimetrosActivosGeom) {
+        let dentro = false;
+        let distKm;
+        if (geom.tipo === 'poligono') {
+            dentro = puntoDentroPoligono(lat, lon, geom.coords);
+            distKm = Math.min(...geom.coords.map(([la, lo]) => distanciaHaversineMetros(lat, lon, la, lo) / 1000));
+        } else {
+            const d = distanciaHaversineMetros(lat, lon, geom.centro[0], geom.centro[1]);
+            dentro = d <= geom.radioM;
+            distKm = Math.max(0, (d - geom.radioM) / 1000);
+        }
+        if (dentro) return { dentro: true, distanciaKm: 0, areaHa: geom.areaHa };
+        if (!mejor || distKm < mejor.distanciaKm) mejor = { dentro: false, distanciaKm: distKm, areaHa: geom.areaHa };
+    }
+    return mejor;
+}
+
 function dibujarPerimetrosActivos(puntos) {
     grupoPerimetroFuegos.clearLayers();
+    window.perimetrosActivosGeom = [];
     if (!puntos.length) return;
 
     const estiloPerimetro = {
@@ -615,9 +683,14 @@ function dibujarPerimetrosActivos(puntos) {
     const grupos = agruparPuntosFuego(puntos, 4000);
     grupos.forEach(grupo => {
         if (grupo.length === 1) {
-            L.circle([grupo[0].lat, grupo[0].lon], { ...estiloPerimetro, radius: 400 })
+            const radioM = 400;
+            L.circle([grupo[0].lat, grupo[0].lon], { ...estiloPerimetro, radius: radioM })
                 .addTo(grupoPerimetroFuegos)
                 .bindTooltip('Perímetro estimado a partir de detecciones activas');
+            window.perimetrosActivosGeom.push({
+                tipo: 'circulo', centro: [grupo[0].lat, grupo[0].lon], radioM,
+                areaHa: Math.PI * radioM * radioM / 10000
+            });
         } else if (grupo.length === 2) {
             const [a, b] = grupo;
             const midLat = (a.lat + b.lat) / 2, midLon = (a.lon + b.lon) / 2;
@@ -625,12 +698,20 @@ function dibujarPerimetrosActivos(puntos) {
             L.circle([midLat, midLon], { ...estiloPerimetro, radius: radio })
                 .addTo(grupoPerimetroFuegos)
                 .bindTooltip('Perímetro estimado a partir de detecciones activas');
+            window.perimetrosActivosGeom.push({
+                tipo: 'circulo', centro: [midLat, midLon], radioM: radio,
+                areaHa: Math.PI * radio * radio / 10000
+            });
         } else {
             const hull = envolventeConvexa(grupo);
             const hullExpandido = expandirDesdeCentroide(hull, 1.3);
             L.polygon(hullExpandido, estiloPerimetro)
                 .addTo(grupoPerimetroFuegos)
                 .bindTooltip('Perímetro estimado a partir de detecciones activas (crece con nuevas detecciones)');
+            window.perimetrosActivosGeom.push({
+                tipo: 'poligono', coords: hullExpandido,
+                areaHa: areaPoligonoHa(hullExpandido)
+            });
         }
     });
 }
