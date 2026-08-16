@@ -18,7 +18,7 @@ export async function handleGetFires(request, env) {
     }
 
     const fuente = 'VIIRS_SNPP_NRT'; // satélite VIIRS, casi-tiempo-real
-    const diasAtras = 1;             // solo detecciones del último día
+    const diasAtras = 3;             // solo detecciones del último día
     const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/${fuente}/${bounds}/${diasAtras}`;
 
     try {
