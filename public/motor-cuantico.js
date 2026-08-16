@@ -87,11 +87,13 @@ baseDark.addTo(map); // capa por defecto
 const grupoFuegos = L.layerGroup().addTo(map);
 
 // Capa de áreas quemadas reales (EFFIS - Copernicus, gratis, sin API key)
+// ARREGLADO: el nombre correcto de la capa es "effis.nrt.ba.poly" (verificado
+// contra el servidor). "EFFIS:BurntAreasAll" no existe y por eso no cargaba.
 const capasEffis = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
-    layers: 'EFFIS:BurntAreasAll',
+    layers: 'effis.nrt.ba.poly',
     format: 'image/png',
     transparent: true,
-    version: '1.1.1',
+    version: '1.3.0',
     opacity: 0.75,
     attribution: 'EFFIS - Copernicus'
 });
