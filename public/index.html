@@ -2,11 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>Manolit∞ Forestal · Predictor cuántico de incendios</title>
+<meta name="description" content="Manolit∞ Forestal: mapa en tiempo real de incendios activos (NASA FIRMS), áreas quemadas (EFFIS/Copernicus), perímetro estimado de propagación y asesor cuántico de riesgo de biomasa forestal.">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
@@ -125,12 +127,14 @@
     }
 
        /* ---------- Log cuántico ---------- */
-    #quantum-log-section { 
-        display: none; /* ← Esto oculta el registro al iniciar la web */
+    #quantum-log-section {
         border-top: 1px solid var(--panel-border); 
         padding-top: 12px; 
         margin-bottom: 14px; 
     }
+    /* Modo ciudadano (simplificado): se oculta el registro cuántico.
+       Por defecto (sin la clase) estás en modo científico y se ve. */
+    #dashboard.mode-citizen #quantum-log-section { display: none; }
     #quantum-log-section h2 {
         font-size: 0.85rem; margin: 0 0 8px 0; color: var(--cyan);
         display: flex; justify-content: space-between; align-items: center;
@@ -226,7 +230,7 @@
 <div id="map"></div>
 
 <div id="language-select-wrap">
-    <select id="language-select">
+    <select id="language-select" aria-label="Selector de idioma">
         <option value="es">Español</option>
         <option value="en">English</option>
     </select>
@@ -242,7 +246,7 @@
     </div>
 
     <div class="mode-toggle-row">
-        <button id="toggle-mode">Modo científico</button>
+        <button id="toggle-mode">Modo ciudadano</button>
     </div>
 
     <div class="readout-coords" id="ui-coords">--, --</div>
@@ -305,11 +309,11 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="idiomas.js"></script>
-<script src="motor-cuantico.js"></script>
-<script src="manolito-chat.js"></script>
-<script src="pdf-informe.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="idiomas.js" defer></script>
+<script src="motor-cuantico.js" defer></script>
+<script src="manolito-chat.js" defer></script>
+<script src="pdf-informe.js" defer></script>
 </body>
 </html>
