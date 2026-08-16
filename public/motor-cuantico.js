@@ -181,10 +181,15 @@ class QuantumSimulator {
 }
 
 // 3. NORMALIZACIÓN
+// Escala progresiva: no exige condiciones extremas para empezar a puntuar.
+// Antes: temp<25°C, hum>40% o viento<15km/h daban 0% de riesgo siempre,
+// aunque el punto tuviera cierto riesgo de fondo real. Ahora escala desde
+// condiciones moderadas, en línea con cómo se comportan los índices de
+// peligro de incendio de referencia (más graduales, sin "todo o nada").
 function normalizarVariables(temp, hum, wind) {
-    const pTemp = Math.min(1, Math.max(0, (temp - 25) / 20));
-    const pHum = Math.min(1, Math.max(0, (40 - hum) / 30));
-    const pWind = Math.min(1, Math.max(0, (wind - 15) / 35));
+    const pTemp = Math.min(1, Math.max(0, (temp - 10) / 30));  // 10°C→0 ... 40°C→1
+    const pHum = Math.min(1, Math.max(0, (85 - hum) / 65));    // 85%→0 ... 20%→1
+    const pWind = Math.min(1, Math.max(0, wind / 45));         // 0km/h→0 ... 45km/h→1
     return { pTemp, pHum, pWind };
 }
 
@@ -753,7 +758,7 @@ function procesarCsvFuegos(csv) {
             <button class="evaluar-fuego-btn" data-lat="${lat}" data-lon="${lon}">${t('popupEvaluarRiesgo')}</button>
         `);
 
-        puntosParaPerimetro.push({ lat, lon });
+        puntosParaPerimetro.push({ lat, lon, confianza });
         contador++;
     }
 
