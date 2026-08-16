@@ -74,7 +74,7 @@ function generarInformePDF(contexto) {
         doc.setFont('helvetica', 'bold');
 
         let textoAviso;
-        if (contexto.perimetroEstimado && contexto.perimetroEstimado.dentro) {
+        if (contexto.perimetroEstimado & contexto.perimetroEstimado.dentro) {
             textoAviso = `ALERTA: ${estado.etiqueta} — DENTRO del perímetro estimado. Aléjate. Emergencias: 112`;
         } else if (estado.color === 'rojo') {
             textoAviso = `ALERTA: ${estado.etiqueta} — si estás cerca de la zona, aléjate. Emergencias: 112`;
