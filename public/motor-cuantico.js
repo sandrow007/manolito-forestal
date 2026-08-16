@@ -86,6 +86,11 @@ baseSat.addTo(map); // capa por defecto (satélite, como en la imagen de referen
 // Grupo de incendios (puntos FIRMS)
 const grupoFuegos = L.layerGroup().addTo(map);
 
+// Grupo del perímetro estimado de incendios activos (se dibuja a partir
+// de los propios puntos FIRMS agrupados, y crece/cambia según llegan
+// detecciones nuevas del satélite)
+const grupoPerimetroFuegos = L.layerGroup().addTo(map);
+
 // Capa de áreas quemadas reales (EFFIS - Copernicus, gratis, sin API key)
 // ARREGLADO: el nombre correcto de la capa es "effis.nrt.ba.poly" (verificado
 // contra el servidor). "EFFIS:BurntAreasAll" no existe y por eso no cargaba.
@@ -110,6 +115,7 @@ const capasBase = {
 
 const capasOverlay = {
     "Incendios activos - puntos (FIRMS)": grupoFuegos,
+    "Perímetro estimado - incendios activos": grupoPerimetroFuegos,
     "Áreas quemadas reales (EFFIS)": capasEffis
 };
 
@@ -521,16 +527,126 @@ async function obtenerDatosClimaticos(lat, lon) {
     }
 }
 
+// 7a. AGRUPACIÓN Y PERÍMETRO ESTIMADO A PARTIR DE PUNTOS ACTIVOS
+// Esto NO es un dato inventado: se calcula en directo a partir de los propios
+// puntos reales de FIRMS. Cada vez que llegan detecciones nuevas del satélite,
+// el contorno se vuelve a calcular y por tanto crece, se junta con otros focos
+// o cambia de forma, igual que en las webs de seguimiento de incendios.
+
+function distanciaHaversineMetros(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Agrupa puntos cercanos entre sí (radio en metros) en focos independientes
+function agruparPuntosFuego(puntos, radioMetros = 4000) {
+    const grupos = [];
+    const visitado = new Array(puntos.length).fill(false);
+    for (let i = 0; i < puntos.length; i++) {
+        if (visitado[i]) continue;
+        const grupo = [puntos[i]];
+        visitado[i] = true;
+        let cambiado = true;
+        while (cambiado) {
+            cambiado = false;
+            for (let j = 0; j < puntos.length; j++) {
+                if (visitado[j]) continue;
+                for (const p of grupo) {
+                    if (distanciaHaversineMetros(p.lat, p.lon, puntos[j].lat, puntos[j].lon) <= radioMetros) {
+                        grupo.push(puntos[j]);
+                        visitado[j] = true;
+                        cambiado = true;
+                        break;
+                    }
+                }
+            }
+        }
+        grupos.push(grupo);
+    }
+    return grupos;
+}
+
+// Envolvente convexa (contorno exterior) de un grupo de puntos
+function envolventeConvexa(puntos) {
+    if (puntos.length < 3) return puntos;
+    const pts = puntos.map(p => ({ x: p.lon, y: p.lat, orig: p }))
+        .sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
+    const cruz = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+    const inferior = [];
+    for (const p of pts) {
+        while (inferior.length >= 2 && cruz(inferior[inferior.length - 2], inferior[inferior.length - 1], p) <= 0) inferior.pop();
+        inferior.push(p);
+    }
+    const superior = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+        const p = pts[i];
+        while (superior.length >= 2 && cruz(superior[superior.length - 2], superior[superior.length - 1], p) <= 0) superior.pop();
+        superior.push(p);
+    }
+    inferior.pop(); superior.pop();
+    return inferior.concat(superior).map(p => p.orig);
+}
+
+// Ensancha ligeramente el contorno hacia fuera desde su centro, para que no
+// pase justo pegado a los puntos y se vea como un perímetro real de incendio
+function expandirDesdeCentroide(puntos, factor = 1.3) {
+    const lat0 = puntos.reduce((s, p) => s + p.lat, 0) / puntos.length;
+    const lon0 = puntos.reduce((s, p) => s + p.lon, 0) / puntos.length;
+    return puntos.map(p => [lat0 + (p.lat - lat0) * factor, lon0 + (p.lon - lon0) * factor]);
+}
+
+function dibujarPerimetrosActivos(puntos) {
+    grupoPerimetroFuegos.clearLayers();
+    if (!puntos.length) return;
+
+    const estiloPerimetro = {
+        color: '#ffd500',
+        weight: 2,
+        fillColor: '#ff4500',
+        fillOpacity: 0.15,
+        dashArray: '4 4'
+    };
+
+    const grupos = agruparPuntosFuego(puntos, 4000);
+    grupos.forEach(grupo => {
+        if (grupo.length === 1) {
+            L.circle([grupo[0].lat, grupo[0].lon], { ...estiloPerimetro, radius: 400 })
+                .addTo(grupoPerimetroFuegos)
+                .bindTooltip('Perímetro estimado a partir de detecciones activas');
+        } else if (grupo.length === 2) {
+            const [a, b] = grupo;
+            const midLat = (a.lat + b.lat) / 2, midLon = (a.lon + b.lon) / 2;
+            const radio = Math.max(500, distanciaHaversineMetros(a.lat, a.lon, b.lat, b.lon) / 2 + 300);
+            L.circle([midLat, midLon], { ...estiloPerimetro, radius: radio })
+                .addTo(grupoPerimetroFuegos)
+                .bindTooltip('Perímetro estimado a partir de detecciones activas');
+        } else {
+            const hull = envolventeConvexa(grupo);
+            const hullExpandido = expandirDesdeCentroide(hull, 1.3);
+            L.polygon(hullExpandido, estiloPerimetro)
+                .addTo(grupoPerimetroFuegos)
+                .bindTooltip('Perímetro estimado a partir de detecciones activas (crece con nuevas detecciones)');
+        }
+    });
+}
+
 // 7b. PROCESADOR DE DATOS DE INCENDIOS
 function procesarCsvFuegos(csv) {
     grupoFuegos.clearLayers();
     const lineas = csv.trim().split('\n');
     if (lineas.length <= 1) {
         DOM.contadorFuegos.textContent = t('ceroFuegosVisibles');
+        grupoPerimetroFuegos.clearLayers();
         return 0;
     }
 
     let contador = 0;
+    const puntosParaPerimetro = [];
     for (let i = 1; i < lineas.length; i++) {
         const cols = lineas[i].split(',');
         const lat = parseFloat(cols[0]);
@@ -556,8 +672,11 @@ function procesarCsvFuegos(csv) {
             <button class="evaluar-fuego-btn" data-lat="${lat}" data-lon="${lon}">${t('popupEvaluarRiesgo')}</button>
         `);
 
+        puntosParaPerimetro.push({ lat, lon });
         contador++;
     }
+
+    dibujarPerimetrosActivos(puntosParaPerimetro);
     return contador;
 }
 
