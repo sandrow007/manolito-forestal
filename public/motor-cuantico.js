@@ -89,13 +89,16 @@ const grupoFuegos = L.layerGroup().addTo(map);
 // Capa de áreas quemadas reales (EFFIS - Copernicus, gratis, sin API key)
 // ARREGLADO: el nombre correcto de la capa es "effis.nrt.ba.poly" (verificado
 // contra el servidor). "EFFIS:BurntAreasAll" no existe y por eso no cargaba.
+const SLD_CONTORNO_AMARILLO = '<?xml version="1.0" encoding="UTF-8"?><StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>effis.nrt.ba.poly</Name><UserStyle><FeatureTypeStyle><Rule><PolygonSymbolizer><Stroke><CssParameter name="stroke">#FFD500</CssParameter><CssParameter name="stroke-width">2</CssParameter></Stroke></PolygonSymbolizer></Rule></FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>';
+
 const capasEffis = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
     layers: 'effis.nrt.ba.poly',
     format: 'image/png',
     transparent: true,
     version: '1.3.0',
-    opacity: 0.75,
-    attribution: 'EFFIS - Copernicus'
+    opacity: 0.95,
+    sld_body: SLD_CONTORNO_AMARILLO,
+    attribution: 'EFFIS - Copernicus (actualizado por paso de satélite VIIRS, casi en tiempo real)'
 });
 
 // Control de capas en bottomright para que no tape el dashboard
