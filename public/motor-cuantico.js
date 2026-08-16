@@ -881,3 +881,32 @@ document.addEventListener('DOMContentLoaded', () => {
     setupUIInteractions();
     cargarFuegosActivos();
 });
+// Capturar los elementos reales de tu interfaz
+const seccionQuantum = document.getElementById('quantum-log-section');
+const botonModo = document.getElementById('toggle-mode');
+const tituloQuantum = document.querySelector('#quantum-log-section h2');
+
+// 1. Mostrar el bloque SOLO si está en modo científico
+botonModo.addEventListener('click', function() {
+    // Revisamos tu HTML para ver si el botón dice Modo científico
+    if (this.innerText === "Modo científico") {
+        this.innerText = "Modo ciudadano"; // Cambias a la otra vista
+        seccionQuantum.style.display = 'block'; // Se vuelve visible para el científico
+    } else {
+        this.innerText = "Modo científico"; // Vuelves a la vista por defecto
+        seccionQuantum.style.display = 'none'; // Se oculta por completo para el ciudadano
+    }
+});
+
+// 2. Hacer interactivo el clic sobre el título "Registro cuántico"
+tituloQuantum.addEventListener('click', function() {
+    // Intercambiamos la clase que ya declaraste en tus estilos CSS
+    seccionQuantum.classList.toggle('section-collapsed');
+    
+    // Cambiamos el indicador visual de la flecha según corresponda
+    if (seccionQuantum.classList.contains('section-collapsed')) {
+        this.innerHTML = "Registro cuántico ▸";
+    } else {
+        this.innerHTML = "Registro cuántico ▾";
+    }
+});

@@ -502,3 +502,9 @@ header h1 span { color: var(--cyan-reposo); }
     .manolito-panel { right: 12px; width: calc(100vw - 24px); }
     #selector-idioma { left: 12px; top: 12px; }
 }
+#quantum-log-section { 
+    display: none; /* Añadir esto para que empiece oculto por defecto */
+    border-top: 1px solid var(--panel-border); 
+    padding-top: 12px; 
+    margin-bottom: 14px; 
+}
