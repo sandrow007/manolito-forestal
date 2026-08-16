@@ -1,7 +1,8 @@
 /**
  * MANOLIT∞ FORESTAL - SIMULADOR CUÁNTICO DE ESTRÉS DE BIOMASA
  * Regla 30-30-30 con entrelazamiento, capas de fuego real (NASA FIRMS),
- * predicción de propagación por viento y asesor Manolito.
+ * áreas quemadas reales (EFFIS), predicción de propagación por viento
+ * y asesor Manolito.
  */
 
 // 0. CONSTANTES Y CONFIGURACIÓN
@@ -46,8 +47,6 @@ const CSV_EJEMPLO_FUEGOS = `latitude,longitude,bright_ti4,scan,track,acq_date,ac
 /**
  * Utilidad para retrasar la ejecución de una función (debounce).
  * Evita que se llame a la API de Overpass en cada clic rápido.
- * @param {Function} func La función a ejecutar.
- * @param {number} wait El tiempo de espera en milisegundos.
  */
 function debounce(func, wait) {
     let timeout;
@@ -66,26 +65,36 @@ const map = L.map('map', {
 });
 
 // Capas base
-const baseDark   = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+const baseDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap © CartoDB',
     subdomains: 'abcd',
     maxZoom: 20
 });
 
-const baseSat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Esri, Maxar, Earthstar Geographics',
     maxZoom: 19
 });
 
-const baseTopo   = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+const baseTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenTopoMap contributors',
     maxZoom: 17
 });
 
-baseDark.addTo(map);  // capa por defecto
+baseDark.addTo(map); // capa por defecto
 
-// Grupo de incendios
+// Grupo de incendios (puntos FIRMS)
 const grupoFuegos = L.layerGroup().addTo(map);
+
+// Capa de áreas quemadas reales (EFFIS - Copernicus, gratis, sin API key)
+const capasEffis = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
+    layers: 'EFFIS:BurntAreasAll',
+    format: 'image/png',
+    transparent: true,
+    version: '1.1.1',
+    opacity: 0.75,
+    attribution: 'EFFIS - Copernicus'
+});
 
 // Control de capas en bottomright para que no tape el dashboard
 const capasBase = {
@@ -93,8 +102,10 @@ const capasBase = {
     "Satélite (ESRI)": baseSat,
     "Topográfica": baseTopo
 };
+
 const capasOverlay = {
-    "Incendios activos (FIRMS)": grupoFuegos
+    "Incendios activos - puntos (FIRMS)": grupoFuegos,
+    "Áreas quemadas reales (EFFIS)": capasEffis
 };
 
 L.control.layers(capasBase, capasOverlay, {
@@ -106,10 +117,9 @@ let marcadorActivo = null;      // marcador de evaluación cuántica
 let flechaViento = null;        // flecha de dirección de viento
 let conoPropagacion = null;     // polígono/cono de propagación estimada
 
-// 2. SIMULADOR CUÁNTICO MEJORADO (3 Qubits)
+// 2. SIMULADOR CUÁNTICO (3 Qubits)
 class QuantumSimulator {
     constructor() {
-        // Vector |000> a |111>  (Temp, Hum, Viento)
         this.estado = [1, 0, 0, 0, 0, 0, 0, 0];
     }
 
@@ -132,7 +142,7 @@ class QuantumSimulator {
     aplicarCNOT(controlIndex, targetIndex) {
         for (let i = 0; i < 8; i++) {
             const isControl1 = (i & (1 << (2 - controlIndex))) !== 0;
-            const isTarget0  = (i & (1 << (2 - targetIndex))) === 0;
+            const isTarget0 = (i & (1 << (2 - targetIndex))) === 0;
             if (isControl1 && isTarget0) {
                 const i0 = i;
                 const i1 = i | (1 << (2 - targetIndex));
@@ -142,9 +152,9 @@ class QuantumSimulator {
     }
 
     medirRiesgoIgnicion() {
-        const pesos = {3: 0.5, 5: 0.7, 6: 0.7, 7: 1.0};
+        const pesos = { 3: 0.5, 5: 0.7, 6: 0.7, 7: 1.0 };
         let riesgo = 0;
-        for (let idx of [3,5,6,7]) {
+        for (let idx of [3, 5, 6, 7]) {
             riesgo += pesos[idx] * Math.pow(this.estado[idx], 2);
         }
         return (riesgo * 100).toFixed(2);
@@ -152,17 +162,17 @@ class QuantumSimulator {
 
     obtenerDetalles() {
         const probs = {};
-        for (let idx of [3,5,6,7]) {
+        for (let idx of [3, 5, 6, 7]) {
             probs[idx] = (Math.pow(this.estado[idx], 2) * 100).toFixed(2);
         }
         return probs;
     }
 }
 
-// 3. NORMALIZACIÓN PRECISA
+// 3. NORMALIZACIÓN
 function normalizarVariables(temp, hum, wind) {
     const pTemp = Math.min(1, Math.max(0, (temp - 25) / 20));
-    const pHum  = Math.min(1, Math.max(0, (40 - hum) / 30));
+    const pHum = Math.min(1, Math.max(0, (40 - hum) / 30));
     const pWind = Math.min(1, Math.max(0, (wind - 15) / 35));
     return { pTemp, pHum, pWind };
 }
@@ -173,8 +183,6 @@ function gradosACardinal(deg) {
     return dirs[Math.round(deg / 22.5) % 16];
 }
 
-// Convierte grados (origen del viento, convención meteorológica) en el
-// azimut hacia el que el fuego tenderá a avanzar (viento sopla HACIA ahí).
 function azimutPropagacion(windDirOrigenDeg) {
     return (windDirOrigenDeg + 180) % 360;
 }
@@ -185,7 +193,7 @@ function destinoDesdeAzimut(lat, lon, azimutDeg, distanciaKm) {
     const lat1 = lat * Math.PI / 180;
     const lon1 = lon * Math.PI / 180;
     const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanciaKm / R) +
-                 Math.cos(lat1) * Math.sin(distanciaKm / R) * Math.cos(brng));
+        Math.cos(lat1) * Math.sin(distanciaKm / R) * Math.cos(brng));
     const lon2 = lon1 + Math.atan2(
         Math.sin(brng) * Math.sin(distanciaKm / R) * Math.cos(lat1),
         Math.cos(distanciaKm / R) - Math.sin(lat1) * Math.sin(lat2)
@@ -193,9 +201,6 @@ function destinoDesdeAzimut(lat, lon, azimutDeg, distanciaKm) {
     return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
 }
 
-// Genera el texto técnico de recomendación de zonas de trabajo según
-// viento, velocidad y % de estrés de biomasa. Devuelve también los
-// azimuts de flanco izquierdo, flanco derecho y cabeza de avance.
 function calcularZonasDeTrabajo(windDirOrigen, windSpeed, pct) {
     const azAvance = azimutPropagacion(windDirOrigen);
     const azFlancoDer = (azAvance + 90) % 360;
@@ -230,7 +235,7 @@ function dibujarPropagacion(lat, lon, windDirOrigen, windSpeed, colorHex) {
     if (conoPropagacion) map.removeLayer(conoPropagacion);
 
     const azAvance = azimutPropagacion(windDirOrigen);
-    const distanciaKm = Math.min(8, 1.5 + windSpeed / 8); // escala visual, no física exacta
+    const distanciaKm = Math.min(8, 1.5 + windSpeed / 8);
 
     const puntoLejano = destinoDesdeAzimut(lat, lon, azAvance, distanciaKm);
     const puntoIzq = destinoDesdeAzimut(lat, lon, (azAvance + 25) % 360, distanciaKm * 0.7);
@@ -319,7 +324,6 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
     DOM.uiAlert.textContent = alertText.toUpperCase();
     DOM.uiAction.innerHTML = actionText;
 
-    // Propagación y zonas de trabajo (solo si tenemos dirección de viento)
     let recomendacion = null;
     if (typeof windDir === 'number' && !isNaN(windDir)) {
         recomendacion = calcularZonasDeTrabajo(windDir, wind, pct);
@@ -327,9 +331,6 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
         dibujarPropagacion(lat, lon, windDir, wind, colorHex);
     }
 
-    // Contexto compartido con Manolito (chat) y el PDF
-    // (vegetacion y aguaCercana se rellenan un poco después, de forma asíncrona,
-    // en obtenerDatosClimaticos → obtenerContextoTerreno)
     window.ultimoContextoManolito = {
         lat, lon, temp, hum, wind,
         windDir: windDir,
@@ -344,11 +345,7 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
     };
 }
 
-// 6a. OVERPASS CON RESPALDO: el servidor público overpass-api.de se
-// satura o se cae con frecuencia. En vez de un único fetch que se puede
-// quedar colgado (ERR_CONNECTION_TIMED_OUT), probamos varios espejos en
-// orden y cortamos cada intento con un timeout, para que la web nunca se
-// quede esperando indefinidamente.
+// 6a. OVERPASS CON RESPALDO (varios espejos + timeout)
 const OVERPASS_MIRRORS = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
@@ -377,7 +374,7 @@ async function consultarOverpass(query, timeoutMs = 8000) {
     return null;
 }
 
-// 6b. CONTEXTO AMPLIADO: vegetación y agua cercana (OpenStreetMap / Overpass, gratis, sin API key)
+// 6b. CONTEXTO AMPLIADO: vegetación y agua cercana
 async function obtenerContextoTerreno(lat, lon) {
     const radioMetros = 3000;
     const query = `
@@ -402,7 +399,7 @@ async function obtenerContextoTerreno(lat, lon) {
     (data.elements || []).forEach(el => {
         const tags = el.tags || {};
         if (tags.natural === 'water' || tags.waterway === 'river' || tags.landuse === 'reservoir') hayAgua = true;
-        if (tags.leaf_type) especies.add(tags.leaf_type); // broadleaved / needleleaved / mixed
+        if (tags.leaf_type) especies.add(tags.leaf_type);
         if (tags.species) especies.add(tags.species);
         if (tags.genus) especies.add(tags.genus);
     });
@@ -417,19 +414,46 @@ async function obtenerContextoTerreno(lat, lon) {
     return { vegetacion: tipoVegetacion, aguaCercana: hayAgua };
 }
 
+// 6c. FETCH CON REINTENTOS (clima) — para que nunca se quede colgado
+async function fetchConReintentos(url, intentos = 3, timeoutMs = 6000) {
+    for (let i = 0; i < intentos; i++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const resp = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (resp.ok) return resp;
+            console.warn(`[Clima] Intento ${i + 1} respondió ${resp.status}`);
+        } catch (e) {
+            clearTimeout(timer);
+            console.warn(`[Clima] Intento ${i + 1} falló:`, e.message);
+        }
+        if (i < intentos - 1) await new Promise(r => setTimeout(r, 600));
+    }
+    return null;
+}
+
 // 6. OBTENCIÓN DE DATOS METEOROLÓGICOS (clic en mapa)
 async function obtenerDatosClimaticos(lat, lon) {
     DOM.uiCoords.textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     DOM.uiPercent.textContent = t('calculando');
     DOM.dashboard.classList.remove('estado-reposo', 'estado-ambar', 'estado-rojo');
 
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,soil_moisture_0_to_1cm,is_day`;
+
+    const resp = await fetchConReintentos(url, 3, 6000);
+
+    if (!resp) {
+        DOM.uiPercent.textContent = 'Error';
+        DOM.uiAlert.textContent = t('errorDatosClima');
+        if (DOM.uiAlert) DOM.uiAlert.dataset.estado = 'error';
+        DOM.uiAction.innerHTML = '';
+        return;
+    }
+
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,soil_moisture_0_to_1cm,is_day`;
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error("API no disponible");
         const data = await resp.json();
 
-        // Si la elevación es 0 o menos, es agua. No calcular biomasa.
         if (data.elevation <= 0) {
             DOM.uiAlert.textContent = t('zonaAgua');
             DOM.uiAction.innerHTML = t('zonaAguaMsg');
@@ -454,14 +478,14 @@ async function obtenerDatosClimaticos(lat, lon) {
                 fillOpacity: 0.6
             }).addTo(map).bindPopup(`<b>${t('popupZonaAgua')}</b><br><small>Elevación: ${data.elevation}m</small>`);
             window.ultimoContextoManolito = null;
-            return; // Detener ejecución
+            return;
         }
 
         const temp = data.current.temperature_2m;
-        const hum  = data.current.relative_humidity_2m;
+        const hum = data.current.relative_humidity_2m;
         const wind = data.current.wind_speed_10m;
         const windDir = data.current.wind_direction_10m;
-        const humedadSuelo = data.current.soil_moisture_0_to_1cm; // m3/m3, 0 a ~0.5
+        const humedadSuelo = data.current.soil_moisture_0_to_1cm;
         const esDia = data.current.is_day === 1;
 
         DOM.uiTemp.textContent = `${temp} °C`;
@@ -469,15 +493,12 @@ async function obtenerDatosClimaticos(lat, lon) {
         DOM.uiWind.textContent = `${wind} km/h`;
         if (DOM.uiWindDir) DOM.uiWindDir.textContent = `${windDir}° (${gradosACardinal(windDir)})`;
 
-        // Nombre del lugar (no bloqueante): se resuelve en paralelo y se
-        // añade al contexto en cuanto llega.
         obtenerNombreLugar(lat, lon).then(lugar => {
             if (window.ultimoContextoManolito && window.ultimoContextoManolito.lat === lat && window.ultimoContextoManolito.lon === lon) {
                 window.ultimoContextoManolito.lugar = lugar;
             }
         }).catch(() => {});
 
-        // Vegetación y agua cercana (no bloqueante, tarda un poco más por ser Overpass)
         obtenerContextoTerreno(lat, lon).then(terreno => {
             if (window.ultimoContextoManolito && window.ultimoContextoManolito.lat === lat && window.ultimoContextoManolito.lon === lon) {
                 window.ultimoContextoManolito.vegetacion = terreno.vegetacion;
@@ -487,7 +508,11 @@ async function obtenerDatosClimaticos(lat, lon) {
 
         ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, null, humedadSuelo, esDia);
     } catch (error) {
-        alert(t('errorDatosClima'));
+        console.error('[Clima] Error procesando respuesta:', error);
+        DOM.uiPercent.textContent = 'Error';
+        DOM.uiAlert.textContent = t('errorDatosClima');
+        if (DOM.uiAlert) DOM.uiAlert.dataset.estado = 'error';
+        DOM.uiAction.innerHTML = '';
     }
 }
 
@@ -510,7 +535,6 @@ function procesarCsvFuegos(csv) {
 
         if (isNaN(lat) || isNaN(lon)) continue;
 
-        // h=high, n=nominal, l=low confidence
         const color = confianza === 'h' ? '#ff4500' : (confianza === 'n' ? '#ffaa00' : '#ff0000');
         const marker = L.circleMarker([lat, lon], {
             radius: 7,
@@ -540,21 +564,20 @@ async function cargarFuegosActivos() {
 
     try {
         const bounds = map.getBounds();
-        const sur  = bounds.getSouth();
+        const sur = bounds.getSouth();
         const oeste = bounds.getWest();
         const norte = bounds.getNorth();
-        const este  = bounds.getEast();
+        const este = bounds.getEast();
 
-        // Llamamos a nuestro Worker seguro en Cloudflare, que inyectará la API Key.
         const boundsParam = `${oeste},${sur},${este},${norte}`;
         const url = `/getFires?bounds=${boundsParam}`;
 
         const resp = await fetch(url);
         if (!resp.ok) throw new Error("FIRMS no respondió");
         const csv = await resp.text();
-        
+
         const contador = procesarCsvFuegos(csv);
-        
+
         if (contador > 0) {
             DOM.contadorFuegos.textContent = t('fuegosActivosDetectados', { count: contador });
         }
@@ -562,29 +585,26 @@ async function cargarFuegosActivos() {
 
     } catch (error) {
         console.error("Error cargando FIRMS:", error);
-        // Fallback a datos de ejemplo si la API falla (típico en dev sin wrangler)
         procesarCsvFuegos(CSV_EJEMPLO_FUEGOS);
         DOM.contadorFuegos.textContent = t('errorFirmsDev');
-        fuegosUltimaActualizacion = Date.now(); // Marcar como actualizado para no reintentar inmediatamente
+        fuegosUltimaActualizacion = Date.now();
     }
 }
 
 // 8. INTERACTIVIDAD DE LA INTERFAZ Y LÓGICA LEGAL
 function setupUIInteractions() {
-    // Cerrar/Restaurar dashboard principal
-    DOM.toggleDashboardBtn.addEventListener('click', function() {
+    DOM.toggleDashboardBtn.addEventListener('click', function () {
         DOM.dashboard.classList.add('closed');
         DOM.reopenDashboardBtn.style.display = 'block';
     });
 
-    DOM.reopenDashboardBtn.addEventListener('click', function() {
+    DOM.reopenDashboardBtn.addEventListener('click', function () {
         DOM.dashboard.classList.remove('closed');
         this.style.display = 'none';
     });
 
-    // Cambiar entre modo Ciudadano y Científico
     if (DOM.toggleModeBtn) {
-        DOM.toggleModeBtn.addEventListener('click', function() {
+        DOM.toggleModeBtn.addEventListener('click', function () {
             DOM.dashboard.classList.toggle('mode-citizen');
             const isCitizenMode = DOM.dashboard.classList.contains('mode-citizen');
             this.textContent = isCitizenMode ? t('modoCientifico') : t('modoCiudadano');
@@ -592,7 +612,6 @@ function setupUIInteractions() {
         });
     }
 
-    // Colapsar/Expandir sección de log cuántico
     if (DOM.quantumLogSection) {
         const logHeader = DOM.quantumLogSection.querySelector('h2');
         if (logHeader) {
@@ -604,15 +623,12 @@ function setupUIInteractions() {
         }
     }
 
-    // Clic en el mapa para evaluar
-    // Usamos debounce para evitar llamadas excesivas a las APIs si se hace clic muy rápido.
-    const debouncedObtenerDatosClimaticos = debounce(function(e) {
+    const debouncedObtenerDatosClimaticos = debounce(function (e) {
         obtenerDatosClimaticos(e.latlng.lat, e.latlng.lng);
-    }, 500); // 500ms de espera
+    }, 500);
     map.on('click', debouncedObtenerDatosClimaticos);
 
-    // Clic en botón "Evaluar" de un incendio (usando delegación de eventos)
-    map.getContainer().addEventListener('click', function(e) {
+    map.getContainer().addEventListener('click', function (e) {
         if (e.target && e.target.classList.contains('evaluar-fuego-btn')) {
             const lat = parseFloat(e.target.dataset.lat);
             const lon = parseFloat(e.target.dataset.lon);
@@ -621,7 +637,6 @@ function setupUIInteractions() {
         }
     });
 
-    // Carga de fuegos al mover el mapa
     map.on('load moveend zoomend', cargarFuegosActivos);
 }
 
@@ -630,7 +645,6 @@ async function initLegalNotice() {
     const showModal = () => { DOM.legalModal.style.display = 'flex'; };
 
     try {
-        // Corregido: Se busca "legal.html". El nombre anterior "legla.html" era una errata.
         const response = await fetch('legal.html');
         if (!response.ok) throw new Error('No se pudo cargar el aviso legal.');
         const legalHTML = await response.text();
