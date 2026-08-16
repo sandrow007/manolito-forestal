@@ -8,7 +8,7 @@
 
     <section>
         <h3>1. Qué es Manolit∞ Forestal</h3>
-        <p>Manolit∞ Forestal es una herramienta de código abierto de apoyo a la decisión en materia de prevención y gestión de incendios forestales. Integra datos meteorológicos reales (Open-Meteo), detección de incendios activos por satélite (NASA FIRMS/VIIRS), un modelo de estrés de biomasa basado en simulación de circuitos cuánticos, un módulo de predicción de propagación por viento, y "Manolito", un asesor conversacional especializado en comportamiento del fuego y priorización de zonas de trabajo.</p>
+        <p>Manolit∞ Forestal es una herramienta de código abierto de apoyo a la decisión en materia de prevención y gestión de incendios forestales. Integra datos meteorológicos reales (Open-Meteo), detección de incendios activos por satélite (NASA FIRMS/VIIRS), áreas quemadas reales (EFFIS/Copernicus), un perímetro estimado de incendio activo calculado a partir de esas mismas detecciones, un modelo de estrés de biomasa basado en simulación de circuitos cuánticos, un módulo de predicción de propagación por viento, y "Manolito", un asesor conversacional especializado en comportamiento del fuego y priorización de zonas de trabajo.</p>
         <p>El objetivo del proyecto es ofrecer, de forma gratuita y accesible, información técnica accionable —qué franjas de biomasa priorizar, hacia dónde tendería a avanzar un incendio según el viento, y qué zonas conviene asegurar primero— para apoyar tanto a la ciudadanía y comunidades rurales como a técnicos forestales, agentes medioambientales y servicios de extinción.</p>
     </section>
 
@@ -16,6 +16,8 @@
         <h3>2. Qué hace exactamente Manolito</h3>
         <ul>
             <li><strong>Localiza incendios activos</strong> a partir de la capa satelital VIIRS/NASA FIRMS, con nivel de confianza de la detección.</li>
+            <li><strong>Dibuja un perímetro estimado del incendio activo</strong>, calculado en el propio navegador agrupando los puntos de detección VIIRS/FIRMS cercanos entre sí y trazando el contorno exterior de cada grupo. Este perímetro se recalcula cada vez que se actualizan los datos de FIRMS, por lo que su forma y tamaño cambian según llegan nuevas detecciones del satélite.</li>
+            <li><strong>Muestra áreas quemadas reales</strong> mediante la capa oficial de Copernicus/EFFIS (detección casi en tiempo real por clustering de puntos de calor VIIRS), actualizada en cada paso del satélite sobre la zona.</li>
             <li><strong>Calcula el estrés de biomasa</strong> de cualquier punto forestal a partir de temperatura, humedad relativa y viento, mediante un modelo cuántico de 3 qubits con entrelazamiento (puertas RY/CNOT y medición según la regla de Born).</li>
             <li><strong>Predice la dirección de propagación</strong> más probable a partir de la dirección y velocidad del viento, distinguiendo cabeza, flancos y cola del incendio, y recomienda qué franja trabajar con prioridad.</li>
             <li><strong>Responde preguntas técnicas</strong> a través del asesor Manolito, entrenado para dar recomendaciones concretas (no genéricas) sobre dónde actuar primero.</li>
@@ -27,6 +29,7 @@
         <h3>3. Límites del sistema — lo que Manolit∞ Forestal NO es</h3>
         <ul>
             <li><strong>No es un servicio oficial de emergencias.</strong> No sustituye bajo ningún concepto las comunicaciones, alertas o instrucciones de bomberos, Protección Civil, AEMET o las autoridades forestales competentes. Ante un incendio activo o cualquier emergencia, contacta siempre y de inmediato con el <strong>112</strong>.</li>
+            <li><strong>El perímetro estimado de incendio activo es una aproximación geométrica, no un dato oficial.</strong> Se genera agrupando los puntos de calor detectados por satélite y trazando el contorno exterior de cada grupo; no proviene de una fuente cartográfica verificada ni de reconocimiento sobre el terreno, y puede sobrestimar, infraestimar o desplazarse respecto al perímetro real del incendio, especialmente en zonas con pocas detecciones o cobertura de nubes/humo.</li>
             <li><strong>No es hardware cuántico real.</strong> El "motor cuántico" es una simulación matemática de un circuito de 3 qubits, ejecutada íntegramente en el navegador mediante JavaScript. No hay ordenador cuántico físico ni servidores externos procesando la operación.</li>
             <li><strong>Es un modelo de apoyo a la decisión, no una certeza.</strong> Las predicciones de propagación y las recomendaciones de zonas de trabajo se basan en datos meteorológicos abiertos y en un modelo simplificado; no incorporan variables como topografía detallada, tipo exacto de combustible o humedad del combustible muerto/vivo medida in situ. La decisión final de despliegue de medios corresponde siempre al mando de extinción.</li>
             <li><strong>Sin ánimo de lucro.</strong> El proyecto es gratuito, no vende datos ni incluye publicidad.</li>
