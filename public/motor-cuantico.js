@@ -81,7 +81,7 @@ const baseTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
     maxZoom: 17
 });
 
-baseDark.addTo(map); // capa por defecto
+baseSat.addTo(map); // capa por defecto (satélite, como en la imagen de referencia)
 
 // Grupo de incendios (puntos FIRMS)
 const grupoFuegos = L.layerGroup().addTo(map);
