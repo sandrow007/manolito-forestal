@@ -9,7 +9,7 @@
 
 async function obtenerNombreLugar(lat, lon) {
     try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=es&zoom=10`;
+        const url = `https://openstreetmap.org{lat}&lon=${lon}&accept-language=es&zoom=10`;
         const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
         if (!resp.ok) return null;
         const data = await resp.json();
@@ -57,7 +57,9 @@ function generarInformePDF(contexto) {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text('MANOLIT∞ FORESTAL', 15, 20);
+    // Nota: El símbolo de infinito (∞) puede no renderizarse en algunas versiones de jsPDF. 
+    // Si ves que falla el título, se cambia por "MANOLITO FORESTAL".
+    doc.text('MANOLIT FORESTAL', 15, 20);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text('Informe técnico de riesgo y propagación de incendio forestal', 15, 28);
@@ -68,23 +70,33 @@ function generarInformePDF(contexto) {
     let y = 42;
     if (estado.color !== 'verde') {
         doc.setFillColor(...estado.rgb);
-        // Ajustamos el alto del rectángulo a 12 para que no corte las letras
-        doc.roundedRect(15, y - 6, 180, 12, 1.5, 1.5, 'F');
+        doc.roundedRect(15, y - 6, 180, 10, 1.5, 1.5, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
+        
+        // CORRECCIÓN 1: Eliminamos el símbolo del triángulo defectuoso para evitar la X griega
         let textoAviso;
         if (contexto.perimetroEstimado && contexto.perimetroEstimado.dentro) {
-            textoAviso = `⚠ ${estado.etiqueta} — DENTRO del perímetro estimado. Aléjate. Emergencias: 112`;
+            textoAviso = `ALERTA: ${estado.etiqueta} — DENTRO del perímetro estimado. Aléjate. Emergencias: 112`;
         } else if (estado.color === 'rojo') {
-            textoAviso = `⚠ ${estado.etiqueta} — si estás cerca de la zona, aléjate. Emergencias: 112`;
+            textoAviso = `ALERTA: ${estado.etiqueta} — si estás cerca de la zona, aléjate. Emergencias: 112`;
         } else {
-            textoAviso = `⚠ ${estado.etiqueta} — sin incendio confirmado, zona bajo vigilancia`;
+            textoAviso = `AVISO: ${estado.etiqueta} — sin incendio confirmado, zona bajo vigilancia`;
         }
-        // Usamos y + 2 para que el texto quede perfectamente centrado dentro del rectángulo y no se oculte
-        doc.text(textoAviso, 20, y + 2);
+
+        // CORRECCIÓN 2: Ajuste dinámico del tamaño de la letra para que el texto NUNCA se corte
+        let tamanoLetra = 11;
+        doc.setFontSize(tamanoLetra);
+        // Si el texto mide más de 172pt (el espacio interno de la caja), bajamos el tamaño de la letra
+        while (doc.getTextWidth(textoAviso) > 172 && tamanoLetra > 7) {
+            tamanoLetra -= 0.5;
+            doc.setFontSize(tamanoLetra);
+        }
+
+        // CORRECCIÓN 3: Ajuste fino de la altura del texto (y + 1) para que quede centrado verticalmente
+        doc.text(textoAviso, 19, y + 1);
         doc.setTextColor(0, 0, 0);
-        y += 16;
+        y += 14;
     }
 
 
@@ -122,10 +134,10 @@ function generarInformePDF(contexto) {
 
     // Perímetro estimado de incendio activo (calculado a partir de los
     // puntos de calor FIRMS agrupados). Solo se muestra si hay datos.
-    if (contexto.perimetroEstimated || contexto.perimetroEstimado) {
+    if (contexto.perimetroEstimado) {
         const p = contexto.perimetroEstimado;
         if (p.dentro) {
-            linea('Perímetro estimado de incendio', `dentro del perímetro (foco de ~${p.areaHa.toFixed(1)} ha)`, [200, 30, 30]);
+            linea('Perímetro estimado de incendio', `dentro del perímetro (foco de ~${p.areaHa.toFixed(1)} ha)`, estado.color !== 'verde' ? estado.rgb : null);
         } else {
             linea('Perímetro estimado más cercano', `a ${p.distanciaKm.toFixed(1)} km (foco de ~${p.areaHa.toFixed(1)} ha)`);
         }
