@@ -60,7 +60,27 @@ const IDIOMAS = {
         trabajoVientoFlojo: "viento flojo: la propagación esperada sería moderada y relativamente predecible",
         trabajoVientoModerado: "viento moderado-fuerte: la cabeza de un posible incendio avanzaría con velocidad significativa",
         trabajoVientoFuerte: "viento fuerte: riesgo de comportamiento errático, focos secundarios por pavesas y avance muy rápido en cabeza",
-        trabajoTexto: `Con viento procedente del {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendio en este punto avanzaría hacia el {cardAvance}. {intensidadViento}.\n\nPRIORIDAD 1 - CABEZA (dirección {cardAvance}): asegurar cortafuegos y retirar biomasa en la franja situada a favor del viento; es la zona de mayor velocidad de avance y de mayor riesgo para personas y estructuras.\n\nPRIORIDAD 2 - FLANCOS ({cardFlancoIzq} y {cardFlancoDer}): trabajar estas franjas perpendiculares para evitar que el incendio "abra" y aumente su frente activo.\n\nZONA DE MENOR PRIORIDAD INMEDIATA - COLA ({cardCola}, a barlovento): el avance del fuego en esta dirección es mucho más lento; es la zona relativamente más segura para maniobras de apoyo y puntos de control, aunque no debe descuidarse.\n\nNivel recomendado de actuación: {urgencia}.`
+        trabajoTexto: `Con viento procedente del {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendio en este punto avanzaría hacia el {cardAvance}. {intensidadViento}.\n\nPRIORIDAD 1 - CABEZA (dirección {cardAvance}): asegurar cortafuegos y retirar biomasa en la franja situada a favor del viento; es la zona de mayor velocidad de avance y de mayor riesgo para personas y estructuras.\n\nPRIORIDAD 2 - FLANCOS ({cardFlancoIzq} y {cardFlancoDer}): trabajar estas franjas perpendiculares para evitar que el incendio "abra" y aumente su frente activo.\n\nZONA DE MENOR PRIORIDAD INMEDIATA - COLA ({cardCola}, a barlovento): el avance del fuego en esta dirección es mucho más lento; es la zona relativamente más segura para maniobras de apoyo y puntos de control, aunque no debe descuidarse.\n\nNivel recomendado de actuación: {urgencia}.`,
+        pdfSubtitulo: "Informe técnico de riesgo y propagación de incendio forestal",
+        pdfEstadoIncendioActivo: "INCENDIO ACTIVO",
+        pdfEstadoRiesgoAlto: "RIESGO ALTO (vigilancia)",
+        pdfEstadoRiesgoBajo: "riesgo bajo-moderado",
+        pdfSeleccionaZona: "Selecciona primero una zona en el mapa para generar el informe.",
+        pdfErrorCarga: "No se pudo cargar el generador de PDF. Comprueba tu conexión.",
+        pdfAlerta: "ALERTA", pdfAviso: "AVISO",
+        pdfDentroPerimetro: "DENTRO del perímetro estimado", pdfAlejate: "Aléjate",
+        pdfSiCerca: "si estás cerca de la zona, aléjate", pdfEmergencias: "Emergencias",
+        pdfSinConfirmar: "sin incendio confirmado, zona bajo vigilancia",
+        pdfFecha: "Fecha del informe", pdfLugar: "Lugar aproximado", pdfNoDisponible: "No disponible",
+        pdfCoordenadas: "Coordenadas", pdfTemperatura: "Temperatura", pdfHumedad: "Humedad relativa",
+        pdfViento: "Viento", pdfDireccionLower: "dirección", pdfEstresBiomasa: "Estrés de biomasa (modelo cuántico)",
+        pdfIncendiosCercanos: "Incendios activos en 25km (satélite)", pdfMasCercano: "el más cercano a",
+        pdfNingunoDetectado: "ninguno detectado", pdfPerimetroIncendio: "Perímetro estimado de incendio",
+        pdfDentroPerimetroCorto: "dentro del perímetro", pdfFocoDe: "foco de",
+        pdfPerimetroCercano: "Perímetro estimado más cercano", pdfADistancia: "a",
+        pdfRecomendacionTitulo: "Recomendación de zonas de trabajo", pdfSinRecomendacion: "Sin recomendación calculada.",
+        pdfNotaRojo: "Este informe es un modelo de apoyo a la decisión basado en datos meteorológicos abiertos (Open-Meteo), satélite de incendios (NASA FIRMS) y una simulación de circuito cuántico ejecutada en el navegador. El perímetro estimado es una aproximación geométrica calculada a partir de los puntos de calor detectados y NO es un dato oficial verificado sobre el terreno. No sustituye las órdenes de mando de bomberos, Protección Civil, AEMET ni al 112. Hay indicios de incendio activo en esta zona: ante cualquier duda, contacta con el 112 o con Protección Civil/bomberos.",
+        pdfNotaVerde: "Este informe es un modelo de apoyo a la decisión basado en datos meteorológicos abiertos (Open-Meteo) y una simulación de circuito cuántico ejecutada en el navegador. El perímetro estimado, cuando aparece, es una aproximación geométrica calculada a partir de los puntos de calor detectados y NO es un dato oficial verificado sobre el terreno. No sustituye las órdenes de mando de bomberos, Protección Civil, AEMET ni al 112. Ante un incendio activo, contacta siempre con el 112."
     },
     ca: {
         titulo: "MANOLIT∞ FORESTAL",
@@ -119,7 +139,27 @@ const IDIOMAS = {
         trabajoVientoFlojo: "vent fluix: la propagació esperada seria moderada i relativament predictible",
         trabajoVientoModerado: "vent moderat-fort: el cap d'un possible incendi avançaria amb velocitat significativa",
         trabajoVientoFuerte: "vent fort: risc de comportament erràtic, focus secundaris per paveses i avanç molt ràpid al cap",
-        trabajoTexto: `Amb vent procedent del {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendi en aquest punt avançaria cap al {cardAvance}. {intensidadViento}.\n\nPRIORITAT 1 - CAP (direcció {cardAvance}): assegurar tallafocs i retirar biomassa a la franja situada a favor del vent; és la zona de major velocitat d'avanç i de major risc per a persones i estructures.\n\nPRIORITAT 2 - FLANCS ({cardFlancoIzq} i {cardFlancoDer}): treballar aquestes franges perpendiculars per evitar que l'incendi "obri" i augmenti el seu front actiu.\n\nZONA DE MENOR PRIORITAT IMMEDIATA - CUA ({cardCola}, a sobrevent): l'avanç del foc en aquesta direcció és molt més lent; és la zona relativament més segura per a maniobres de suport i punts de control, encara que no s'ha de descuidar.\n\nNivell recomanat d'actuació: {urgencia}.`
+        trabajoTexto: `Amb vent procedent del {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendi en aquest punt avançaria cap al {cardAvance}. {intensidadViento}.\n\nPRIORITAT 1 - CAP (direcció {cardAvance}): assegurar tallafocs i retirar biomassa a la franja situada a favor del vent; és la zona de major velocitat d'avanç i de major risc per a persones i estructures.\n\nPRIORITAT 2 - FLANCS ({cardFlancoIzq} i {cardFlancoDer}): treballar aquestes franges perpendiculars per evitar que l'incendi "obri" i augmenti el seu front actiu.\n\nZONA DE MENOR PRIORITAT IMMEDIATA - CUA ({cardCola}, a sobrevent): l'avanç del foc en aquesta direcció és molt més lent; és la zona relativament més segura per a maniobres de suport i punts de control, encara que no s'ha de descuidar.\n\nNivell recomanat d'actuació: {urgencia}.`,
+        pdfSubtitulo: "Informe tècnic de risc i propagació d'incendi forestal",
+        pdfEstadoIncendioActivo: "INCENDI ACTIU",
+        pdfEstadoRiesgoAlto: "RISC ALT (vigilància)",
+        pdfEstadoRiesgoBajo: "risc baix-moderat",
+        pdfSeleccionaZona: "Selecciona primer una zona al mapa per generar l'informe.",
+        pdfErrorCarga: "No s'ha pogut carregar el generador de PDF. Comprova la teva connexió.",
+        pdfAlerta: "ALERTA", pdfAviso: "AVÍS",
+        pdfDentroPerimetro: "DINS del perímetre estimat", pdfAlejate: "Allunya't",
+        pdfSiCerca: "si estàs a prop de la zona, allunya't", pdfEmergencias: "Emergències",
+        pdfSinConfirmar: "sense incendi confirmat, zona sota vigilància",
+        pdfFecha: "Data de l'informe", pdfLugar: "Lloc aproximat", pdfNoDisponible: "No disponible",
+        pdfCoordenadas: "Coordenades", pdfTemperatura: "Temperatura", pdfHumedad: "Humitat relativa",
+        pdfViento: "Vent", pdfDireccionLower: "direcció", pdfEstresBiomasa: "Estrès de biomassa (model quàntic)",
+        pdfIncendiosCercanos: "Incendis actius en 25km (satèl·lit)", pdfMasCercano: "el més proper a",
+        pdfNingunoDetectado: "cap detectat", pdfPerimetroIncendio: "Perímetre estimat d'incendi",
+        pdfDentroPerimetroCorto: "dins del perímetre", pdfFocoDe: "focus de",
+        pdfPerimetroCercano: "Perímetre estimat més proper", pdfADistancia: "a",
+        pdfRecomendacionTitulo: "Recomanació de zones de treball", pdfSinRecomendacion: "Sense recomanació calculada.",
+        pdfNotaRojo: "Aquest informe és un model de suport a la decisió basat en dades meteorològiques obertes (Open-Meteo), satèl·lit d'incendis (NASA FIRMS) i una simulació de circuit quàntic executada al navegador. El perímetre estimat és una aproximació geomètrica calculada a partir dels punts de calor detectats i NO és una dada oficial verificada sobre el terreny. No substitueix les ordres de comandament de bombers, Protecció Civil, AEMET ni el 112. Hi ha indicis d'incendi actiu en aquesta zona: davant de qualsevol dubte, contacta amb el 112 o amb Protecció Civil/bombers.",
+        pdfNotaVerde: "Aquest informe és un model de suport a la decisió basat en dades meteorològiques obertes (Open-Meteo) i una simulació de circuit quàntic executada al navegador. El perímetre estimat, quan apareix, és una aproximació geomètrica calculada a partir dels punts de calor detectats i NO és una dada oficial verificada sobre el terreny. No substitueix les ordres de comandament de bombers, Protecció Civil, AEMET ni el 112. Davant d'un incendi actiu, contacta sempre amb el 112."
     },
     eu: {
         titulo: "MANOLIT∞ FORESTAL",
@@ -178,7 +218,27 @@ const IDIOMAS = {
         trabajoVientoFlojo: "haize ahula: espero den hedapena moderatua eta nahiko aurreikusgarria litzateke",
         trabajoVientoModerado: "haize moderatu-indartsua: sute posible baten buruak abiadura handiz egingo luke aurrera",
         trabajoVientoFuerte: "haize indartsua: portaera irregularra izateko arriskua, txinpartengatiko bigarren mailako fokuak eta aurrerapen oso azkarra buruan",
-        trabajoTexto: `{cardCola}-tik datorren haizearekin ({windDirOrigen}°) {windSpeed} km/h-ko abiaduran, puntu honetako sute batek {cardAvance}-rantz egingo luke aurrera. {intensidadViento}.\n\nLEHENTASUNA 1 - BURUA ({cardAvance} norabidea): suebakiak ziurtatu eta biomasa kendu haizearen aldeko zerrendan; abiadura handieneko eta pertsona eta egiturarentzako arrisku handieneko eremua da.\n\nLEHENTASUNA 2 - HEGALAK ({cardFlancoIzq} eta {cardFlancoDer}): zerrenda perpendikular hauek landu, suteak "ireki" eta bere fronte aktiboa handitzea saihesteko.\n\nBEREHALAKO LEHENTASUN TXIKIAGOKO EREMUA - BUZTANA ({cardCola}, haizearen kontra): suaren aurrerapena norabide honetan askoz motelagoa da; laguntza-maniobrak eta kontrol-puntuak egiteko eremu nahiko seguruena da, baina ez da alde batera utzi behar.\n\nJarduera-maila gomendatua: {urgencia}.`
+        trabajoTexto: `{cardCola}-tik datorren haizearekin ({windDirOrigen}°) {windSpeed} km/h-ko abiaduran, puntu honetako sute batek {cardAvance}-rantz egingo luke aurrera. {intensidadViento}.\n\nLEHENTASUNA 1 - BURUA ({cardAvance} norabidea): suebakiak ziurtatu eta biomasa kendu haizearen aldeko zerrendan; abiadura handieneko eta pertsona eta egiturarentzako arrisku handieneko eremua da.\n\nLEHENTASUNA 2 - HEGALAK ({cardFlancoIzq} eta {cardFlancoDer}): zerrenda perpendikular hauek landu, suteak "ireki" eta bere fronte aktiboa handitzea saihesteko.\n\nBEREHALAKO LEHENTASUN TXIKIAGOKO EREMUA - BUZTANA ({cardCola}, haizearen kontra): suaren aurrerapena norabide honetan askoz motelagoa da; laguntza-maniobrak eta kontrol-puntuak egiteko eremu nahiko seguruena da, baina ez da alde batera utzi behar.\n\nJarduera-maila gomendatua: {urgencia}.`,
+        pdfSubtitulo: "Baso-suteen arrisku eta hedapenaren txosten teknikoa",
+        pdfEstadoIncendioActivo: "SU AKTIBOA",
+        pdfEstadoRiesgoAlto: "ARRISKU HANDIA (zaintza)",
+        pdfEstadoRiesgoBajo: "arrisku baxu-ertaina",
+        pdfSeleccionaZona: "Aukeratu lehenik eremu bat maparen txostena sortzeko.",
+        pdfErrorCarga: "Ezin izan da PDF sortzailea kargatu. Egiaztatu konexioa.",
+        pdfAlerta: "ALERTA", pdfAviso: "OHARRA",
+        pdfDentroPerimetro: "estimatutako perimetroaren BARNEAN", pdfAlejate: "Urrundu",
+        pdfSiCerca: "eremutik gertu bazaude, urrundu", pdfEmergencias: "Larrialdiak",
+        pdfSinConfirmar: "sua baieztatu gabe, eremua zaintzapean",
+        pdfFecha: "Txostenaren data", pdfLugar: "Gutxi gorabeherako lekua", pdfNoDisponible: "Ez dago eskuragarri",
+        pdfCoordenadas: "Koordenatuak", pdfTemperatura: "Tenperatura", pdfHumedad: "Hezetasun erlatiboa",
+        pdfViento: "Haizea", pdfDireccionLower: "norabidea", pdfEstresBiomasa: "Biomasa estresa (eredu kuantikoa)",
+        pdfIncendiosCercanos: "Su aktiboak 25km-tan (satelitea)", pdfMasCercano: "hurbilena",
+        pdfNingunoDetectado: "bat ere ez detektatu", pdfPerimetroIncendio: "Suaren perimetro estimatua",
+        pdfDentroPerimetroCorto: "perimetroaren barnean", pdfFocoDe: "fokua",
+        pdfPerimetroCercano: "Perimetro estimatu hurbilena", pdfADistancia: "hemen:",
+        pdfRecomendacionTitulo: "Lan-eremuen gomendioa", pdfSinRecomendacion: "Ez dago gomendio kalkulaturik.",
+        pdfNotaRojo: "Txosten hau erabaki-laguntzako eredu bat da, datu meteorologiko irekietan (Open-Meteo), su-sateliteetan (NASA FIRMS) eta nabigatzailean exekutatutako zirkuitu kuantikoaren simulazio batean oinarrituta. Perimetro estimatua hurbilketa geometriko bat da, detektatutako beroguneetatik kalkulatua, eta EZ da lurrean egiaztatutako datu ofiziala. Ez du ordezkatzen suhiltzaileen, Babes Zibilaren, AEMETen edo 112ren agindua. Sute aktiboaren zantzuak daude eremu honetan: edozein zalantza izanez gero, jarri harremanetan 112rekin edo Babes Zibilarekin/suhiltzaileekin.",
+        pdfNotaVerde: "Txosten hau erabaki-laguntzako eredu bat da, datu meteorologiko irekietan (Open-Meteo) eta nabigatzailean exekutatutako zirkuitu kuantikoaren simulazio batean oinarrituta. Agertzen denean, perimetro estimatua hurbilketa geometriko bat da, detektatutako beroguneetatik kalkulatua, eta EZ da lurrean egiaztatutako datu ofiziala. Ez du ordezkatzen suhiltzaileen, Babes Zibilaren, AEMETen edo 112ren agindua. Su aktiboaren aurrean, jarri beti harremanetan 112rekin."
     },
     gl: {
         titulo: "MANOLIT∞ FORESTAL",
@@ -237,7 +297,27 @@ const IDIOMAS = {
         trabajoVientoFlojo: "vento frouxo: a propagación agardada sería moderada e relativamente predicible",
         trabajoVientoModerado: "vento moderado-forte: a cabeza dun posible incendio avanzaría con velocidade significativa",
         trabajoVientoFuerte: "vento forte: risco de comportamento errático, focos secundarios por faíscas e avance moi rápido na cabeza",
-        trabajoTexto: `Con vento procedente do {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendio neste punto avanzaría cara ao {cardAvance}. {intensidadViento}.\n\nPRIORIDADE 1 - CABEZA (dirección {cardAvance}): asegurar cortalumes e retirar biomasa na franxa situada a favor do vento; é a zona de maior velocidade de avance e de maior risco para persoas e estruturas.\n\nPRIORIDADE 2 - FLANCOS ({cardFlancoIzq} e {cardFlancoDer}): traballar estas franxas perpendiculares para evitar que o incendio "abra" e aumente a súa fronte activa.\n\nZONA DE MENOR PRIORIDADE INMEDIATA - COLA ({cardCola}, a barlovento): o avance do lume nesta dirección é moito máis lento; é a zona relativamente máis segura para manobras de apoio e puntos de control, aínda que non debe descoidarse.\n\nNivel recomendado de actuación: {urgencia}.`
+        trabajoTexto: `Con vento procedente do {cardCola} ({windDirOrigen}°) a {windSpeed} km/h, un incendio neste punto avanzaría cara ao {cardAvance}. {intensidadViento}.\n\nPRIORIDADE 1 - CABEZA (dirección {cardAvance}): asegurar cortalumes e retirar biomasa na franxa situada a favor do vento; é a zona de maior velocidade de avance e de maior risco para persoas e estruturas.\n\nPRIORIDADE 2 - FLANCOS ({cardFlancoIzq} e {cardFlancoDer}): traballar estas franxas perpendiculares para evitar que o incendio "abra" e aumente a súa fronte activa.\n\nZONA DE MENOR PRIORIDADE INMEDIATA - COLA ({cardCola}, a barlovento): o avance do lume nesta dirección é moito máis lento; é a zona relativamente máis segura para manobras de apoio e puntos de control, aínda que non debe descoidarse.\n\nNivel recomendado de actuación: {urgencia}.`,
+        pdfSubtitulo: "Informe técnico de risco e propagación de incendio forestal",
+        pdfEstadoIncendioActivo: "LUME ACTIVO",
+        pdfEstadoRiesgoAlto: "RISCO ALTO (vixilancia)",
+        pdfEstadoRiesgoBajo: "risco baixo-moderado",
+        pdfSeleccionaZona: "Selecciona primeiro unha zona no mapa para xerar o informe.",
+        pdfErrorCarga: "Non se puido cargar o xerador de PDF. Verifica a túa conexión.",
+        pdfAlerta: "ALERTA", pdfAviso: "AVISO",
+        pdfDentroPerimetro: "DENTRO do perímetro estimado", pdfAlejate: "Afástate",
+        pdfSiCerca: "se estás preto da zona, afástate", pdfEmergencias: "Emerxencias",
+        pdfSinConfirmar: "sen incendio confirmado, zona baixo vixilancia",
+        pdfFecha: "Data do informe", pdfLugar: "Lugar aproximado", pdfNoDisponible: "Non dispoñible",
+        pdfCoordenadas: "Coordenadas", pdfTemperatura: "Temperatura", pdfHumedad: "Humidade relativa",
+        pdfViento: "Vento", pdfDireccionLower: "dirección", pdfEstresBiomasa: "Estrés de biomasa (modelo cuántico)",
+        pdfIncendiosCercanos: "Lumes activos en 25km (satélite)", pdfMasCercano: "o máis próximo a",
+        pdfNingunoDetectado: "ningún detectado", pdfPerimetroIncendio: "Perímetro estimado de incendio",
+        pdfDentroPerimetroCorto: "dentro do perímetro", pdfFocoDe: "foco de",
+        pdfPerimetroCercano: "Perímetro estimado máis próximo", pdfADistancia: "a",
+        pdfRecomendacionTitulo: "Recomendación de zonas de traballo", pdfSinRecomendacion: "Sen recomendación calculada.",
+        pdfNotaRojo: "Este informe é un modelo de apoio á decisión baseado en datos meteorolóxicos abertos (Open-Meteo), satélite de incendios (NASA FIRMS) e unha simulación de circuíto cuántico executada no navegador. O perímetro estimado é unha aproximación xeométrica calculada a partir dos puntos de calor detectados e NON é un dato oficial verificado sobre o terreo. Non substitúe as ordes de mando de bombeiros, Protección Civil, AEMET nin ao 112. Hai indicios de incendio activo nesta zona: ante calquera dúbida, contacta co 112 ou con Protección Civil/bombeiros.",
+        pdfNotaVerde: "Este informe é un modelo de apoio á decisión baseado en datos meteorolóxicos abertos (Open-Meteo) e unha simulación de circuíto cuántico executada no navegador. O perímetro estimado, cando aparece, é unha aproximación xeométrica calculada a partir dos puntos de calor detectados e NON é un dato oficial verificado sobre o terreo. Non substitúe as ordes de mando de bombeiros, Protección Civil, AEMET nin ao 112. Ante un incendio activo, contacta sempre co 112."
     },
     en: {
         titulo: "MANOLIT∞ FOREST",
@@ -296,7 +376,27 @@ const IDIOMAS = {
         trabajoVientoFlojo: "light wind: expected spread would be moderate and relatively predictable",
         trabajoVientoModerado: "moderate-strong wind: the head of a possible fire would advance with significant speed",
         trabajoVientoFuerte: "strong wind: risk of erratic behavior, spot fires from embers, and very rapid head advance",
-        trabajoTexto: `With wind from {cardCola} ({windDirOrigen}°) at {windSpeed} km/h, a fire at this point would advance towards {cardAvance}. {intensidadViento}.\n\nPRIORITY 1 - HEAD (direction {cardAvance}): secure firebreaks and clear biomass in the downwind strip; this is the area of fastest advance and greatest risk to people and structures.\n\nPRIORITY 2 - FLANKS ({cardFlancoIzq} and {cardFlancoDer}): work these perpendicular strips to prevent the fire from "opening up" and increasing its active front.\n\nLOWER IMMEDIATE PRIORITY ZONE - TAIL ({cardCola}, upwind): fire spread in this direction is much slower; it is the relatively safer area for support maneuvers and control points, although it should not be neglected.\n\nRecommended level of action: {urgencia}.`
+        trabajoTexto: `With wind from {cardCola} ({windDirOrigen}°) at {windSpeed} km/h, a fire at this point would advance towards {cardAvance}. {intensidadViento}.\n\nPRIORITY 1 - HEAD (direction {cardAvance}): secure firebreaks and clear biomass in the downwind strip; this is the area of fastest advance and greatest risk to people and structures.\n\nPRIORITY 2 - FLANKS ({cardFlancoIzq} and {cardFlancoDer}): work these perpendicular strips to prevent the fire from "opening up" and increasing its active front.\n\nLOWER IMMEDIATE PRIORITY ZONE - TAIL ({cardCola}, upwind): fire spread in this direction is much slower; it is the relatively safer area for support maneuvers and control points, although it should not be neglected.\n\nRecommended level of action: {urgencia}.`,
+        pdfSubtitulo: "Technical report on forest fire risk and spread",
+        pdfEstadoIncendioActivo: "ACTIVE FIRE",
+        pdfEstadoRiesgoAlto: "HIGH RISK (surveillance)",
+        pdfEstadoRiesgoBajo: "low-moderate risk",
+        pdfSeleccionaZona: "Select an area on the map first to generate the report.",
+        pdfErrorCarga: "Could not load the PDF generator. Check your connection.",
+        pdfAlerta: "ALERT", pdfAviso: "NOTICE",
+        pdfDentroPerimetro: "INSIDE the estimated perimeter", pdfAlejate: "Move away",
+        pdfSiCerca: "if you are near the area, move away", pdfEmergencias: "Emergencies",
+        pdfSinConfirmar: "no confirmed fire, area under surveillance",
+        pdfFecha: "Report date", pdfLugar: "Approximate location", pdfNoDisponible: "Not available",
+        pdfCoordenadas: "Coordinates", pdfTemperatura: "Temperature", pdfHumedad: "Relative humidity",
+        pdfViento: "Wind", pdfDireccionLower: "direction", pdfEstresBiomasa: "Biomass stress (quantum model)",
+        pdfIncendiosCercanos: "Active fires within 25km (satellite)", pdfMasCercano: "closest at",
+        pdfNingunoDetectado: "none detected", pdfPerimetroIncendio: "Estimated fire perimeter",
+        pdfDentroPerimetroCorto: "inside the perimeter", pdfFocoDe: "focus of",
+        pdfPerimetroCercano: "Closest estimated perimeter", pdfADistancia: "at",
+        pdfRecomendacionTitulo: "Recommended work zones", pdfSinRecomendacion: "No recommendation calculated.",
+        pdfNotaRojo: "This report is a decision-support model based on open weather data (Open-Meteo), fire satellite data (NASA FIRMS), and a quantum circuit simulation run in the browser. The estimated perimeter is a geometric approximation calculated from detected heat points and is NOT officially verified ground data. It does not replace the orders of firefighters, Civil Protection, AEMET or 112. There are signs of active fire in this area: if in doubt, contact 112 or Civil Protection/firefighters.",
+        pdfNotaVerde: "This report is a decision-support model based on open weather data (Open-Meteo) and a quantum circuit simulation run in the browser. The estimated perimeter, when shown, is a geometric approximation calculated from detected heat points and is NOT officially verified ground data. It does not replace the orders of firefighters, Civil Protection, AEMET or 112. In case of an active fire, always contact 112."
     },
     fr: {
         titulo: "MANOLIT∞ FORESTAL",
@@ -355,7 +455,27 @@ const IDIOMAS = {
         trabajoVientoFlojo: "vent faible : la propagation attendue serait modérée et relativement prévisible",
         trabajoVientoModerado: "vent modéré à fort : la tête d'un éventuel incendie avancerait à une vitesse significative",
         trabajoVientoFuerte: "vent fort : risque de comportement erratique, de foyers secondaires dus aux escarbilles et d'avancée très rapide en tête",
-        trabajoTexto: `Avec un vent venant de {cardCola} ({windDirOrigen}°) à {windSpeed} km/h, un incendie à ce point avancerait vers {cardAvance}. {intensidadViento}.\n\nPRIORITÉ 1 - TÊTE (direction {cardAvance}) : sécuriser les pare-feux et défricher la biomasse dans la bande sous le vent ; c'est la zone de plus grande vitesse de propagation et de plus grand risque pour les personnes et les structures.\n\nPRIORITÉ 2 - FLANCS ({cardFlancoIzq} et {cardFlancoDer}) : travailler ces bandes perpendiculaires pour empêcher l'incendie de "s'ouvrir" et d'augmenter son front actif.\n\nZONE DE PRIORITÉ IMMÉDIATE INFÉRIEURE - QUEUE ({cardCola}, au vent) : la progression du feu dans cette direction est beaucoup plus lente ; c'est la zone relativement la plus sûre pour les manœuvres de soutien et les points de contrôle, bien qu'elle ne doive pas être négligée.\n\nNiveau d'action recommandé : {urgencia}.`
+        trabajoTexto: `Avec un vent venant de {cardCola} ({windDirOrigen}°) à {windSpeed} km/h, un incendie à ce point avancerait vers {cardAvance}. {intensidadViento}.\n\nPRIORITÉ 1 - TÊTE (direction {cardAvance}) : sécuriser les pare-feux et défricher la biomasse dans la bande sous le vent ; c'est la zone de plus grande vitesse de propagation et de plus grand risque pour les personnes et les structures.\n\nPRIORITÉ 2 - FLANCS ({cardFlancoIzq} et {cardFlancoDer}) : travailler ces bandes perpendiculaires pour empêcher l'incendie de "s'ouvrir" et d'augmenter son front actif.\n\nZONE DE PRIORITÉ IMMÉDIATE INFÉRIEURE - QUEUE ({cardCola}, au vent) : la progression du feu dans cette direction est beaucoup plus lente ; c'est la zone relativement la plus sûre pour les manœuvres de soutien et les points de contrôle, bien qu'elle ne doive pas être négligée.\n\nNiveau d'action recommandé : {urgencia}.`,
+        pdfSubtitulo: "Rapport technique de risque et propagation d'incendie forestier",
+        pdfEstadoIncendioActivo: "INCENDIE ACTIF",
+        pdfEstadoRiesgoAlto: "RISQUE ÉLEVÉ (surveillance)",
+        pdfEstadoRiesgoBajo: "risque faible-modéré",
+        pdfSeleccionaZona: "Sélectionnez d'abord une zone sur la carte pour générer le rapport.",
+        pdfErrorCarga: "Impossible de charger le générateur de PDF. Vérifiez votre connexion.",
+        pdfAlerta: "ALERTE", pdfAviso: "AVIS",
+        pdfDentroPerimetro: "À L'INTÉRIEUR du périmètre estimé", pdfAlejate: "Éloignez-vous",
+        pdfSiCerca: "si vous êtes près de la zone, éloignez-vous", pdfEmergencias: "Urgences",
+        pdfSinConfirmar: "aucun incendie confirmé, zone sous surveillance",
+        pdfFecha: "Date du rapport", pdfLugar: "Lieu approximatif", pdfNoDisponible: "Non disponible",
+        pdfCoordenadas: "Coordonnées", pdfTemperatura: "Température", pdfHumedad: "Humidité relative",
+        pdfViento: "Vent", pdfDireccionLower: "direction", pdfEstresBiomasa: "Stress de la biomasse (modèle quantique)",
+        pdfIncendiosCercanos: "Incendies actifs dans un rayon de 25km (satellite)", pdfMasCercano: "le plus proche à",
+        pdfNingunoDetectado: "aucun détecté", pdfPerimetroIncendio: "Périmètre estimé de l'incendie",
+        pdfDentroPerimetroCorto: "à l'intérieur du périmètre", pdfFocoDe: "foyer de",
+        pdfPerimetroCercano: "Périmètre estimé le plus proche", pdfADistancia: "à",
+        pdfRecomendacionTitulo: "Recommandation des zones de travail", pdfSinRecomendacion: "Aucune recommandation calculée.",
+        pdfNotaRojo: "Ce rapport est un modèle d'aide à la décision basé sur des données météorologiques ouvertes (Open-Meteo), un satellite d'incendies (NASA FIRMS) et une simulation de circuit quantique exécutée dans le navigateur. Le périmètre estimé est une approximation géométrique calculée à partir des points de chaleur détectés et n'est PAS une donnée officielle vérifiée sur le terrain. Il ne remplace pas les ordres des pompiers, de la Protection Civile, de l'AEMET ni du 112. Des indices d'incendie actif sont présents dans cette zone : en cas de doute, contactez le 112 ou la Protection Civile/les pompiers.",
+        pdfNotaVerde: "Ce rapport est un modèle d'aide à la décision basé sur des données météorologiques ouvertes (Open-Meteo) et une simulation de circuit quantique exécutée dans le navigateur. Le périmètre estimé, lorsqu'il apparaît, est une approximation géométrique calculée à partir des points de chaleur détectés et n'est PAS une donnée officielle vérifiée sur le terrain. Il ne remplace pas les ordres des pompiers, de la Protection Civile, de l'AEMET ni du 112. En cas d'incendie actif, contactez toujours le 112."
     }
 };
 
@@ -371,9 +491,6 @@ function t(clave, interpolaciones = {}) {
 
 function aplicarIdioma() {
     document.documentElement.lang = idiomaActual;
-    const mapa = {
-        'ui-titulo-span': null, // el h1 se maneja aparte por el <span>
-    };
     const setText = (id, clave) => { const el = document.getElementById(id); if (el) el.textContent = t(clave); };
 
     setText('ui-subtitle', 'subtitulo');
