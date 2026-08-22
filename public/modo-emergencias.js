@@ -2,30 +2,21 @@
  * MANOLIT∞ FORESTAL - Modo de Emergencia
  * Panel visual + orquestador de conexiones WebRTC reales
  *
- * ÚNICO ARCHIVO. No hace falta tocar nada más salvo añadir una línea
- * en tu index.html, DESPUÉS de baliza-ultrasonica.js:
+ * ÚNICO ARCHIVO de frontend. Añade en tu index.html, DESPUÉS de
+ * baliza-ultrasonica.js:
  *
  *   <script src="baliza-ultrasonica.js"></script>
- *   <script src="modo-emergencia.js"></script>
+ *   <script src="modo-emergencias.js"></script>
  *
  * Qué hace:
- * 1. Inyecta su propio CSS y HTML (no toca tus otros ficheros).
- * 2. Pinta un botón flotante (triángulo de alerta) en cualquier pantalla,
- *    incluido encima del mapa. Al pulsarlo se abre el panel de emergencia.
- * 3. Al "Activar modo emergencia" arranca BalizaUltrasonica (ya la tienes).
- * 4. Cuando la baliza detecta un ID cercano, se decide automáticamente
- *    quién "llama" y quién "responde" (comparando IDs) para no chocar,
- *    y se abre un RTCPeerConnection real con canal de datos ("peligro").
- * 5. Señalización (el intercambio de SDP/ICE que WebRTC necesita para
- *    arrancar) es enchufable:
- *      - Si tu proyecto ya carga Firebase (firebase.firestore()), lo usa
- *        automáticamente vía una colección "senales_emergencia".
- *      - Si no hay Firebase, cae a un modo manual (copiar/pegar un código
- *        corto) para que puedas probar YA, hoy, entre dos móviles.
- *
- * Limitación honesta: sin ningún canal de señalización (Firebase u otro
- * servidor), dos móviles independientes NO pueden intercambiar SDP/ICE
- * solos por el aire; por eso existe el modo manual como red de seguridad.
+ * 1. Inyecta su propio CSS y HTML (botón flotante + panel).
+ * 2. Al "Activar modo emergencia" arranca BalizaUltrasonica.
+ * 3. Al detectar un ID cercano, decide sola quién "llama" y quién
+ *    "responde" (comparando IDs, sin choques) y abre un
+ *    RTCPeerConnection real con canal de datos ("peligro").
+ * 4. La señalización (el papeleo SDP/ICE que WebRTC necesita para
+ *    arrancar) viaja AUTOMÁTICAMENTE por tu propio Worker, a través de
+ *    la ruta /senal (ver senales.js). Nada de copiar/pegar códigos.
  */
 
 (function () {
@@ -48,7 +39,7 @@
     #me-fab {
       position: fixed;
       left: 18px;
-      bottom: 18px;
+      bottom: 90px;
       width: 62px;
       height: 62px;
       border-radius: 50%;
@@ -225,33 +216,6 @@
       cursor: pointer;
     }
 
-    /* --- Fallback manual de señalización --- */
-    #me-manual { display: none; margin-top: 16px; border-top: 1px dashed var(--me-borde); padding-top: 14px; }
-    #me-manual.me-visible { display: block; }
-    #me-manual textarea {
-      width: 100%;
-      background: #0a0c11;
-      border: 1px solid var(--me-borde);
-      color: var(--me-texto);
-      border-radius: 8px;
-      font-size: 11px;
-      padding: 8px;
-      height: 60px;
-      resize: none;
-      box-sizing: border-box;
-    }
-    #me-manual label { font-size: 12px; color: var(--me-texto-tenue); display:block; margin: 8px 0 4px; }
-    #me-manual button {
-      margin-top: 8px;
-      background: #2a2f3a;
-      color: var(--me-texto);
-      border: none;
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
     #me-cerrar {
       position: absolute;
       top: 14px;
@@ -284,7 +248,7 @@
         <div class="me-sub">
           Detecta a otras personas cerca por ultrasonido y abre una conexión
           directa (WebRTC) para intercambiar datos de peligro, sin depender
-          de que todo el mundo tenga internet.
+          de que todo el mundo tenga internet en ese momento.
         </div>
 
         <button id="me-btn-toggle">Activar modo emergencia</button>
@@ -301,19 +265,6 @@
             <button id="me-enviar">Enviar</button>
           </div>
         </div>
-
-        <div id="me-manual">
-          <div class="me-sub" style="margin-bottom:4px;">
-            No se detectó Firebase en la página, así que la señalización va
-            en modo manual: copia el código de abajo y pégaselo a la otra
-            persona (por WhatsApp, AirDrop, lo que sea), y viceversa.
-          </div>
-          <label id="me-manual-label-local">Tu código (envíaselo a la otra persona):</label>
-          <textarea id="me-manual-local" readonly></textarea>
-          <label>Pega aquí el código que te han enviado:</label>
-          <textarea id="me-manual-remoto"></textarea>
-          <button id="me-manual-aplicar">Aplicar código recibido</button>
-        </div>
       </div>
     </div>
   `;
@@ -322,15 +273,15 @@
   // 3. LÓGICA
   // ============================================================
   const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  const INTERVALO_SONDEO_MS = 1500; // cada cuánto pregunta al Worker si hay mensajes
 
   class GestorEmergencia {
     constructor() {
       this.activo = false;
       this.baliza = null;
-      this.conexiones = new Map(); // id remoto -> { pc, canal, estado }
-      this._pendienteManual = null; // { idRemoto, pc } a la espera de código pegado
+      this.conexiones = new Map(); // id remoto -> { pc, canalDatos, estado }
+      this._timerSondeo = null;
       this._montarUI();
-      this._canal = null; // canal de señalización, se resuelve al activar
     }
 
     // ---------- UI ----------
@@ -355,17 +306,12 @@
       this.$log = document.getElementById('me-log');
       this.$input = document.getElementById('me-input');
       this.$enviar = document.getElementById('me-enviar');
-      this.$manual = document.getElementById('me-manual');
-      this.$manualLocal = document.getElementById('me-manual-local');
-      this.$manualRemoto = document.getElementById('me-manual-remoto');
-      this.$manualAplicar = document.getElementById('me-manual-aplicar');
 
       this.$fab.addEventListener('click', () => this.$overlay.classList.add('me-abierto'));
       this.$cerrar.addEventListener('click', () => this.$overlay.classList.remove('me-abierto'));
       this.$overlay.addEventListener('click', (e) => { if (e.target === this.$overlay) this.$overlay.classList.remove('me-abierto'); });
       this.$toggle.addEventListener('click', () => this.activo ? this.desactivar() : this.activar());
       this.$enviar.addEventListener('click', () => this._enviarPrueba());
-      this.$manualAplicar.addEventListener('click', () => this._aplicarCodigoManual());
     }
 
     _log(msg) {
@@ -382,8 +328,6 @@
         this.$estadoTxt.textContent = 'Falta baliza-ultrasonica.js en la página';
         return;
       }
-
-      this._canal = this._obtenerCanalSenal();
 
       this.baliza = new window.BalizaUltrasonica((idDetectado) => this._alDetectarDispositivo(idDetectado));
       try {
@@ -403,32 +347,26 @@
       this.$miId.innerHTML = `Tu ID de emergencia: <b>${this.baliza.idPropio}</b>`;
       this.$logWrap.classList.add('me-visible');
 
-      if (this._canal.tipo === 'manual') {
-        this.$manual.classList.add('me-visible');
-      }
-
-      if (this._canal.escuchar) {
-        this._canal.escuchar(this.baliza.idPropio, (de, mensaje) => this._alRecibirSenal(de, mensaje));
-      }
-
+      this._iniciarSondeoSenales();
       this._log('Modo emergencia activado. Escuchando ultrasonidos...');
     }
 
     desactivar() {
       this.activo = false;
       if (this.baliza) this.baliza.detener();
+      if (this._timerSondeo) clearInterval(this._timerSondeo);
+
       for (const [, info] of this.conexiones) {
         try { info.pc.close(); } catch (e) {}
       }
       this.conexiones.clear();
-      this._renderLista();
+      this.$lista.innerHTML = '';
 
       this.$fab.classList.remove('me-activo');
       this.$toggle.textContent = 'Activar modo emergencia';
       this.$toggle.classList.remove('me-on');
       this.$estado.classList.remove('me-buscando');
       this.$estadoTxt.textContent = 'Modo desactivado';
-      this.$manual.classList.remove('me-visible');
       this._log('Modo emergencia desactivado.');
     }
 
@@ -510,82 +448,33 @@
       }
     }
 
-    // ---------- CANAL DE SEÑALIZACIÓN (enchufable) ----------
-    _obtenerCanalSenal() {
-      if (window.canalSenalEmergencia) {
-        return window.canalSenalEmergencia;
-      }
-      if (window.firebase && typeof firebase.firestore === 'function') {
-        return this._crearCanalFirestore();
-      }
-      return this._crearCanalManual();
-    }
-
-    _crearCanalFirestore() {
-      const db = firebase.firestore();
-      const coleccion = db.collection('senales_emergencia');
-      let callback = null;
-      let idPropio = null;
-
-      return {
-        tipo: 'firestore',
-        enviar: (destino, mensaje) => {
-          coleccion.add({
-            de: idPropio,
-            para: destino,
-            datos: JSON.stringify(mensaje),
-            ts: Date.now()
-          });
-        },
-        escuchar: (miId, cb) => {
-          idPropio = miId;
-          callback = cb;
-          coleccion.where('para', '==', miId)
-            .orderBy('ts')
-            .onSnapshot((snap) => {
-              snap.docChanges().forEach((cambio) => {
-                if (cambio.type === 'added') {
-                  const d = cambio.doc.data();
-                  callback(d.de, JSON.parse(d.datos));
-                }
-              });
-            });
-        }
-      };
-    }
-
-    _crearCanalManual() {
-      const gestor = this;
-      return {
-        tipo: 'manual',
-        enviar: (destino, mensaje) => {
-          // Guarda el mensaje pendiente en el cuadro "tu código" para
-          // que el usuario lo copie y se lo pase a mano a la otra persona.
-          const paquete = { destino, mensaje };
-          gestor.$manualLocal.value = btoa(JSON.stringify(paquete));
-          gestor._log(`✋ Código de señalización listo para copiar (para ${destino})`);
-        },
-        escuchar: () => { /* el usuario pega el código a mano, ver _aplicarCodigoManual */ }
-      };
-    }
-
-    _aplicarCodigoManual() {
-      const texto = this.$manualRemoto.value.trim();
-      if (!texto) return;
-      try {
-        const paquete = JSON.parse(atob(texto));
-        this._alRecibirSenal(paquete.destino === this.baliza.idPropio ? paquete.mensaje.de || 'DESCONOCIDO' : paquete.destino, paquete.mensaje);
-        this.$manualRemoto.value = '';
-      } catch (e) {
-        this._log('⚠️ Código pegado no válido');
-      }
-    }
-
+    // ---------- SEÑALIZACIÓN AUTOMÁTICA VÍA TU WORKER ----------
+    // Un móvil deja el mensaje con POST /senal, el otro lo recoge
+    // preguntando con GET /senal?para=SU_ID. No hay que copiar nada.
     _enviarSenal(destino, mensaje) {
-      if (!this._canal) return;
-      // Adjuntamos el remitente para que el otro lado sepa quién habla
       const conRemitente = Object.assign({ de: this.baliza.idPropio }, mensaje);
-      this._canal.enviar(destino, conRemitente);
+      fetch('/senal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ de: this.baliza.idPropio, para: destino, datos: conRemitente })
+      }).catch((e) => this._log('⚠️ No se pudo enviar la señal: ' + e.message));
+    }
+
+    _iniciarSondeoSenales() {
+      this._timerSondeo = setInterval(async () => {
+        if (!this.activo || !this.baliza) return;
+        try {
+          const resp = await fetch(`/senal?para=${encodeURIComponent(this.baliza.idPropio)}`);
+          if (!resp.ok) return;
+          const mensajes = await resp.json();
+          for (const m of mensajes) {
+            this._alRecibirSenal(m.de, m.datos);
+          }
+        } catch (e) {
+          // Fallo de red puntual: no pasa nada, se reintenta en el
+          // siguiente ciclo de sondeo.
+        }
+      }, INTERVALO_SONDEO_MS);
     }
 
     // ---------- UI: lista de dispositivos ----------
@@ -602,10 +491,6 @@
       badge.className = 'me-badge ' + estado;
       const etiquetas = { buscando: 'buscando', conectando: 'conectando', conectado: 'conectado', fallo: 'fallo' };
       badge.textContent = etiquetas[estado] || estado;
-    }
-
-    _renderLista() {
-      this.$lista.innerHTML = '';
     }
 
     // ---------- Enviar datos de peligro reales ----------
@@ -626,15 +511,14 @@
       const texto = this.$input.value.trim();
       if (!texto) return;
       const enviados = this.enviarDatoPeligro({ tipo: 'prueba', texto, ts: Date.now() });
-      if (enviados === 0) this._log('⚠️ No hay ninguna conexión abierta todavía');
+      if (enviados === 0) this._log('⚠️ No hay ninguna conexión abierta todavía con nadie');
       this.$input.value = '';
     }
   }
 
   window.gestorEmergencia = new GestorEmergencia();
 
-  // API pública mínima para el resto de tu app (por ejemplo, tu mapa
-  // podría llamar a esto cuando detecte un incendio real):
+  // API pública mínima para el resto de tu app:
   //   window.gestorEmergencia.activar()
   //   window.gestorEmergencia.enviarDatoPeligro({ lat, lng, tipo: 'incendio' })
 })();

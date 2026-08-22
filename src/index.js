@@ -1,11 +1,13 @@
 /**
  * MANOLIT∞ FORESTAL - Worker principal
- * Enruta las peticiones a la API (Manolito, FIRMS) y deja pasar todo lo
- * demás al servidor de archivos estáticos (carpeta "dist", binding ASSETS).
+ * Enruta las peticiones a la API (Manolito, FIRMS, Señalización de
+ * emergencia) y deja pasar todo lo demás al servidor de archivos
+ * estáticos (carpeta "dist", binding ASSETS).
  */
 
 import { handleManolitoPost, handleManolitoOptions } from './manolito.js';
 import { handleGetFires } from './getFires.js';
+import { handleSenalPost, handleSenalGet, handleSenalOptions } from './senales.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -19,6 +21,13 @@ export default {
 
     if (url.pathname === '/getFires') {
       return handleGetFires(request, env);
+    }
+
+    if (url.pathname === '/senal') {
+      if (request.method === 'POST') return handleSenalPost(request, env);
+      if (request.method === 'GET') return handleSenalGet(request, env);
+      if (request.method === 'OPTIONS') return handleSenalOptions();
+      return new Response('Method Not Allowed', { status: 405 });
     }
 
     // Cualquier otra ruta: servir los archivos estáticos de "dist"
