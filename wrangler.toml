@@ -21,3 +21,6 @@ custom_domain = true
 [[routes]]
 pattern = "www.manolitoforestal.space"
 custom_domain = true
+[[kv_namespaces]]
+binding = "SENALES"
+id = "0cad5d6a1472430d8ccde8efa26436bd"
