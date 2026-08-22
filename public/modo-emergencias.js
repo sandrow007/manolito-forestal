@@ -47,7 +47,7 @@
 
     #me-fab {
       position: fixed;
-      right: 18px;
+      left: 18px;
       bottom: 18px;
       width: 62px;
       height: 62px;
