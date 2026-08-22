@@ -114,8 +114,15 @@ class BalizaUltrasonica {
     // --- ESCUCHA: capta el micrófono y decodifica identificadores ajenos ---
     async iniciarEscucha() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            this.microfono = this.audioCtx.createMediaStreamSource(stream);
+        const stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1
+    }
+}); 
+           this.microfono = this.audioCtx.createMediaStreamSource(stream);
             this.analizador = this.audioCtx.createAnalyser();
             this.analizador.fftSize = 4096;
             this.microfono.connect(this.analizador);
@@ -148,7 +155,7 @@ class BalizaUltrasonica {
         for (let i = binMin; i <= binMax && i < buffer.length; i++) {
             if (buffer[i] > mejorValor) { mejorValor = buffer[i]; mejorBin = i; }
         }
-        if (mejorValor < -55) return null; // demasiado débil, ruido de fondo
+        if (mejorValor < -65) return null; // demasiado débil, ruido de fondo
         return mejorBin * binHz;
     }
 
