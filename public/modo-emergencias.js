@@ -1,6 +1,7 @@
 /**
  * MANOLIT∞ FORESTAL - Modo de Emergencia
  * Panel visual + orquestador de conexiones WebRTC reales
+ * + Protocolo de retransmisión mesh (integrado en este mismo archivo)
  *
  * ÚNICO ARCHIVO de frontend. Añade en tu index.html, DESPUÉS de
  * baliza-ultrasonica.js:
@@ -17,10 +18,51 @@
  * 4. La señalización (el papeleo SDP/ICE que WebRTC necesita para
  *    arrancar) viaja AUTOMÁTICAMENTE por tu propio Worker, a través de
  *    la ruta /senal (ver senales.js). Nada de copiar/pegar códigos.
+ * 5. NUEVO: cuando llega un mensaje de emergencia por cualquier canal
+ *    abierto, se reenvía solo a todos los demás móviles conectados
+ *    (con un límite de saltos y sin repetirlo dos veces), así el
+ *    mensaje puede viajar de móvil en móvil aunque el que lo mandó
+ *    ya no esté cerca de quien lo recibe al final.
+ *
+ * CÓMO SE USA DESDE TU PROPIA APP (por ejemplo, al pulsar un botón):
+ *
+ *   window.gestorEmergencia.emitirEmergencia('FUEGO', { lat: 37.38, lng: -5.99 });
+ *   window.gestorEmergencia.emitirEmergencia('ATRAPADO');
+ *   window.gestorEmergencia.emitirEmergencia('SOS');
+ *   window.gestorEmergencia.emitirEmergencia('ESTOY_A_SALVO');
+ *
+ * PARA MOSTRAR EN PANTALLA LAS EMERGENCIAS QUE VAN LLEGANDO:
+ *
+ *   window.addEventListener('manolit:emergencia', function(e) {
+ *     console.log(e.detail); // { id, codigo, de, ts, lat, lng... }
+ *     // aquí pon tu código para pintarlo en la pantalla
+ *   });
  */
 
 (function () {
   'use strict';
+
+  // ============================================================
+  // 0. PROTOCOLO MESH - catálogo de códigos de emergencia
+  // ============================================================
+  const MESH_TTL_MAXIMO = 6; // cuántos móviles como máximo puede saltar un mensaje
+  const MESH_VENTANA_REPETIDOS_MS = 5 * 60 * 1000; // 5 minutos
+
+  const MESH_CODIGOS = {
+    SOS: 1,
+    FUEGO: 2,
+    ATRAPADO: 3,
+    NECESITO_AYUDA: 4,
+    ESTOY_A_SALVO: 5,
+  };
+
+  const MESH_NOMBRES = {
+    1: 'SOS',
+    2: '🔥 Fuego',
+    3: '⚠️ Persona atrapada',
+    4: '💧 Necesita ayuda',
+    5: '✅ A salvo',
+  };
 
   // ============================================================
   // 1. ESTILOS
@@ -281,6 +323,7 @@
       this.baliza = null;
       this.conexiones = new Map(); // id remoto -> { pc, canalDatos, estado }
       this._timerSondeo = null;
+      this._meshVistos = new Map(); // ids de mensajes de emergencia ya procesados
       this._montarUI();
     }
 
@@ -421,7 +464,12 @@
     _prepararCanalDatos(canal, idRemoto, info) {
       info.canalDatos = canal;
       canal.onopen = () => this._log(`✅ Canal de datos abierto con ${idRemoto}`);
-      canal.onmessage = (evento) => this._log(`⬅️ ${idRemoto}: ${evento.data}`);
+      // NUEVO: además del log normal, cualquier mensaje que llegue se
+      // pasa por el protocolo mesh para ver si hay que retransmitirlo.
+      canal.onmessage = (evento) => {
+        this._log(`⬅️ ${idRemoto}: ${evento.data}`);
+        this._meshAlLlegarMensaje(evento.data, idRemoto);
+      };
     }
 
     async _alRecibirSenal(idRemoto, mensaje) {
@@ -493,7 +541,7 @@
       badge.textContent = etiquetas[estado] || estado;
     }
 
-    // ---------- Enviar datos de peligro reales ----------
+    // ---------- Enviar datos de peligro reales (mensaje suelto, sin mesh) ----------
     enviarDatoPeligro(objeto) {
       const texto = JSON.stringify(objeto);
       let enviados = 0;
@@ -514,6 +562,86 @@
       if (enviados === 0) this._log('⚠️ No hay ninguna conexión abierta todavía con nadie');
       this.$input.value = '';
     }
+
+    // ============================================================
+    // 4. PROTOCOLO MESH — retransmisión automática entre móviles
+    // ============================================================
+
+    // Llama a esto para mandar una emergencia nueva a toda la red.
+    // Ejemplo: gestorEmergencia.emitirEmergencia('FUEGO', { lat: 37.38, lng: -5.99 })
+    emitirEmergencia(codigoTexto, datosExtra) {
+      datosExtra = datosExtra || {};
+      const codigo = MESH_CODIGOS[codigoTexto];
+      if (!codigo) {
+        console.warn('[Mesh] Código desconocido:', codigoTexto, '— usa uno de:', Object.keys(MESH_CODIGOS).join(', '));
+        return null;
+      }
+
+      const mensaje = Object.assign({
+        tipo: 'emergencia-mesh',
+        id: this._meshGenerarId(),
+        codigo: codigo,
+        ttl: MESH_TTL_MAXIMO,
+        de: (this.baliza && this.baliza.idPropio) || '??????',
+        ts: Date.now(),
+      }, datosExtra);
+
+      this._meshVistos.set(mensaje.id, Date.now());
+      const enviados = this._meshDifundir(mensaje, null);
+      this._log(`📢 Emergencia emitida (${MESH_NOMBRES[codigo]}) a ${enviados} dispositivo(s)`);
+      return mensaje;
+    }
+
+    // Se llama automáticamente desde _prepararCanalDatos cada vez que
+    // llega cualquier mensaje por el canal de datos.
+    _meshAlLlegarMensaje(datoTexto, idRemoto) {
+      let mensaje;
+      try {
+        mensaje = JSON.parse(datoTexto);
+      } catch (e) {
+        return; // no era JSON, se ignora
+      }
+      if (!mensaje || mensaje.tipo !== 'emergencia-mesh' || !mensaje.id) return;
+
+      if (this._meshVistos.has(mensaje.id)) return; // repetido, no lo proceses dos veces
+      this._meshVistos.set(mensaje.id, Date.now());
+      this._meshLimpiarAntiguos();
+
+      const nombre = MESH_NOMBRES[mensaje.codigo] || 'Emergencia';
+      this._log(`${nombre} — recibida vía ${idRemoto}, reenviando a la red...`);
+      window.dispatchEvent(new CustomEvent('manolit:emergencia', { detail: mensaje }));
+
+      // Reenvía a los demás, con un pequeño retraso al azar para que no
+      // todos los móviles reenvíen exactamente en el mismo instante.
+      if (mensaje.ttl > 0) {
+        const paraReenviar = Object.assign({}, mensaje, { ttl: mensaje.ttl - 1 });
+        setTimeout(() => this._meshDifundir(paraReenviar, idRemoto), Math.random() * 300);
+      }
+    }
+
+    _meshDifundir(mensaje, idQueLoEnvio) {
+      const texto = JSON.stringify(mensaje);
+      let enviados = 0;
+      for (const [idVecino, info] of this.conexiones) {
+        if (idVecino === idQueLoEnvio) continue; // no se lo devuelvas a quien te lo mandó
+        if (info.canalDatos && info.canalDatos.readyState === 'open') {
+          info.canalDatos.send(texto);
+          enviados++;
+        }
+      }
+      return enviados;
+    }
+
+    _meshGenerarId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    _meshLimpiarAntiguos() {
+      const ahora = Date.now();
+      for (const [id, ts] of this._meshVistos) {
+        if (ahora - ts > MESH_VENTANA_REPETIDOS_MS) this._meshVistos.delete(id);
+      }
+    }
   }
 
   window.gestorEmergencia = new GestorEmergencia();
@@ -521,4 +649,5 @@
   // API pública mínima para el resto de tu app:
   //   window.gestorEmergencia.activar()
   //   window.gestorEmergencia.enviarDatoPeligro({ lat, lng, tipo: 'incendio' })
+  //   window.gestorEmergencia.emitirEmergencia('FUEGO', { lat, lng })
 })();
