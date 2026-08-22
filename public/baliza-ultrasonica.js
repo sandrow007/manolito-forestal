@@ -166,7 +166,7 @@ class BalizaUltrasonica {
         for (let i = binMin; i <= binMax && i < buffer.length; i++) {
             if (buffer[i] > mejorValor) { mejorValor = buffer[i]; mejorBin = i; }
         }
-        if (mejorValor < -60) return null; // umbral algo más permisivo que antes
+        if (mejorValor < -65) return null; // umbral algo más permisivo que antes
         return mejorBin * binHz;
     }
 
