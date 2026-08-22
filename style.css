@@ -214,6 +214,32 @@ header h1 span { color: var(--cyan-reposo); }
     padding-bottom: 0;
     margin-bottom: 0;
 }
+/* Scroll del aviso legal, a juego con el tema táctico cian */
+.modal-body {
+    scroll-behavior: smooth;
+}
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-body::-webkit-scrollbar-track {
+    background: #111;
+}
+.modal-body::-webkit-scrollbar-thumb {
+    background: rgba(0, 243, 255, 0.35);
+    border-radius: 4px;
+}
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 243, 255, 0.6);
+}
+
+/* Efecto suave al abrir el aviso legal */
+.modal-container {
+    animation: modalEntrada 0.25s ease;
+}
+@keyframes modalEntrada {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 /* Scroll sutil */
 #dashboard::-webkit-scrollbar { width: 5px; }
 #dashboard::-webkit-scrollbar-track { background: #111; }

@@ -37,6 +37,17 @@
     </section>
 
     <section>
+        <h3>3bis. Modo Emergencia P2P — EN PRUEBAS, NO OPERATIVO</h3>
+        <p><strong>Este modo está en fase de desarrollo y pruebas internas. NO es funcional, NO está verificado, y NO debe usarse como método de comunicación en una emergencia real bajo ningún concepto.</strong></p>
+        <ul>
+            <li><strong>Qué intenta hacer:</strong> detectar otros dispositivos cercanos mediante señales de ultrasonido y establecer una conexión directa entre navegadores (WebRTC) para intercambiar avisos de peligro sin depender de que haya conexión a internet en ese momento.</li>
+            <li><strong>Por qué no es fiable todavía:</strong> el emparejamiento por ultrasonido y el establecimiento de la conexión WebRTC dependen del hardware, el sistema operativo y el navegador de cada dispositivo, y en las pruebas realizadas hasta ahora el comportamiento es inconsistente entre distintos móviles (varía especialmente entre Android e iPhone). No hay ninguna garantía de que dos dispositivos lleguen a conectarse, ni de que el aviso llegue a tiempo, ni de que llegue en absoluto.</li>
+            <li><strong>No sustituye a nada oficial.</strong> Ante cualquier emergencia real, contacta siempre con el <strong>112</strong>. Esta función no es, ni pretende ser, un sistema de alerta certificado.</li>
+            <li><strong>Se ofrece de forma visible en la interfaz únicamente con fines de desarrollo y prueba pública abierta</strong>, para poder recibir uso real de distintos dispositivos y mejorar su fiabilidad. Se actualizará este aviso en cuanto (y si) el sistema alcance un nivel de fiabilidad suficiente para considerarse funcional.</li>
+        </ul>
+    </section>
+
+    <section>
         <h3>4. Privacidad y tratamiento de datos</h3>
         <ul>
             <li><strong>Consultas meteorológicas:</strong> al hacer clic en el mapa, el navegador consulta directamente la API pública de Open-Meteo con las coordenadas seleccionadas. No almacenamos esas consultas en servidores propios.</li>
