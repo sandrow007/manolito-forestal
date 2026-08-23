@@ -23,8 +23,9 @@
  *  - El informe local de último recurso (sin IA) también usa esos
  *    números y sabe decir cómo escapar y dónde limpiar.
  *
- * Orden de motores (sin cambios): 1) Cloudflare Workers AI ->
- * 2) OpenRouter -> 3) Pollinations -> 4) informe local determinista.
+ * Orden de motores: 1) Cloudflare Workers AI -> 2) OpenRouter ->
+ * 3) informe local determinista (sin IA, con los números reales del
+ * punto). Pollinations se eliminó por inestable.
  */
 
 const SYSTEM_PROMPT = (idioma) => `Eres MANOLIT∞: bombero forestal veterano y técnico en gestión de emergencias y de montes. Décadas de campo en el monte mediterráneo. Dominas comportamiento del fuego, meteorología de incendios, topografía, modelos de combustible (Anderson/Rothermel), silvicultura preventiva y protocolos de emergencia. Hablas como persona de campo: cercano y claro en temas tranquilos; técnico, preciso y directo cuando hay fuego o riesgo. Cercano NUNCA significa superficial: la información tiene que servir a un vecino y a un BRIF.
@@ -145,23 +146,11 @@ export async function handleManolitoPost(request, env) {
     }
   }
 
-  // 3) Pollinations (gratuito)
-  try {
-    const promptCompleto = `${SYSTEM_PROMPT(idiomaFinal)}\n\n${userContent}`;
-    const url = `https://text.pollinations.ai/${encodeURIComponent(promptCompleto)}`;
-    const resp = await fetch(url);
-    if (resp.ok) {
-      const texto = await resp.text();
-      if (texto && !esRespuestaEvasiva(texto)) {
-        console.log(`[Manolito] motor: pollinations`);
-        return jsonResponse({ respuesta: texto, motor: 'pollinations' });
-      }
-    }
-  } catch (e) {
-    console.error(`[Manolito] Fallo pollinations:`, e.message);
-  }
-
-  // 4) Informe local determinista (nunca falla)
+  // 3) Informe local determinista (nunca falla)
+  // Pollinations se ha eliminado de la cadena: se caía demasiado a menudo
+  // y dejaba al usuario esperando para nada. Si Cloudflare AI y
+  // OpenRouter fallan, se responde directamente con el informe local,
+  // que usa los cálculos reales del punto (FFWI, Rothermel, escape).
   if (contexto && typeof contexto.lat === 'number') {
     console.log(`[Manolito] motor: local (fallback)`);
     return jsonResponse({ respuesta: generarLecturaLocal(contexto, contextoWebTexto), motor: 'local' });
