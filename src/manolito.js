@@ -1,52 +1,68 @@
 /**
- * MANOLIT∞ FORESTAL - Lógica del asesor "Manolit"
- * (Convertido de Cloudflare Pages Function a módulo de Worker normal)
+ * MANOLIT∞ FORESTAL - Cerebro del asesor "Manolit∞" (Worker, v2)
+ * ==============================================================
+ * Reescrito para que Manolit∞ sea de verdad un técnico de incendios:
  *
- * Tono: cercano y humano por defecto. Se pone técnico y de manual SOLO
- * cuando la pregunta trata de fuego activo o riesgo real. El aviso del
- * 112 aparece cuando el punto está en rojo/amarillo o preguntan
- * directamente por incendios/riesgo, no como coletilla en cada respuesta.
+ *  - El prompt ahora incluye doctrina operativa REAL: geometría del
+ *    incendio (cabeza/flancos/cola), protocolo LCES, las 10 órdenes
+ *    estándar y las 18 situaciones de vigilancia del servicio forestal
+ *    de EE.UU., regla 30-30-30 y "crossover" (HR < T), criterio de
+ *    zona de seguridad de Butler & Cohen (4× llama), y gestión de
+ *    combustible a la española (desbroce, claras, poda, franjas de 25 m
+ *    en interfaz urbano-forestal según la Ley 43/2003 de Montes y sus
+ *    desarrollos autonómicos, fajas auxiliares, áreas cortafuegos
+ *    estratégicas, pastoreo dirigido, quema prescrita).
  *
- * Si faltan datos clave de la zona (vegetación, agua...), se refuerza el
- * contexto con un resumen de Wikipedia del lugar antes de preguntar al
- * modelo, para que Manolit∞ nunca se quede corto de info.
+ *  - Ahora recibe del frontend un objeto "ciencia" con cálculos REALES
+ *    del punto: FFWI de Fosberg, ROS de Rothermel con modelo de
+ *    combustible de Anderson elegido según la vegetación OSM del punto,
+ *    intensidad de Byram, longitud de llama, distancia de seguridad y
+ *    azimuts de escape. Manolit∞ ya no opina "a sensación": razona con
+ *    números de ingeniería de incendios.
  *
- * Orden de motores: 1) Cloudflare Workers AI (binding "AI") -> 2) OpenRouter
- * (si hay OPENROUTER_API_KEY) -> 3) Pollinations (gratuito) -> 4) informe
- * local generado sin IA como último recurso, para que Manolit∞ nunca falle
- * ni se quede preguntando.
+ *  - El informe local de último recurso (sin IA) también usa esos
+ *    números y sabe decir cómo escapar y dónde limpiar.
+ *
+ * Orden de motores (sin cambios): 1) Cloudflare Workers AI ->
+ * 2) OpenRouter -> 3) Pollinations -> 4) informe local determinista.
  */
 
-const SYSTEM_PROMPT = (idioma) => `Eres MANOLIT∞: el experto de referencia de esta web sobre cualquier punto del territorio que se seleccione. Eres bombero forestal veterano con décadas de campo, y además dominas geografía, climatología, ecología mediterránea e hidrología de emergencia. Hablas como una persona real y cercana, no como un informe: con calma, con alguna expresión coloquial si viene a cuento, pero sin perder autoridad técnica cuando hace falta.
+const SYSTEM_PROMPT = (idioma) => `Eres MANOLIT∞: bombero forestal veterano y técnico en gestión de emergencias y de montes. Décadas de campo en el monte mediterráneo. Dominas comportamiento del fuego, meteorología de incendios, topografía, modelos de combustible (Anderson/Rothermel), silvicultura preventiva y protocolos de emergencia. Hablas como persona de campo: cercano y claro en temas tranquilos; técnico, preciso y directo cuando hay fuego o riesgo. Cercano NUNCA significa superficial: la información tiene que servir a un vecino y a un BRIF.
 
-MODO DE RESPUESTA — esto es lo más importante:
-- Si la pregunta es general (qué hay en la zona, qué vegetación, cómo está el tiempo, curiosidades del sitio) y el punto NO está en rojo ni en amarillo, responde como lo haría un guarda forestal charlando contigo: cercano, humano, ameno, sin jerga de manual. Puedes meter algo técnico dentro de la conversación, pero suena a persona, no a protocolo.
-- Si la pregunta trata de un incendio activo, de un punto marcado en rojo o amarillo, comportamiento del fuego, dónde trabajar la biomasa o cómo actuar ante riesgo real, entonces sí te pones serio y técnico: preciso, directo, con vocabulario de operaciones (flanco, cola, cabeza, franja perimetral...).
-- Importante: cercano NO significa simple. Aunque el tono sea humano, la información tiene que servirle igual a un curioso que a un profesional de emergencias — bombero, técnico de Protección Civil, agente forestal. No recortes profundidad técnica por sonar más cercano; cambia el envoltorio, no el contenido.
-- NO termines cada respuesta recordando el 112 por sistema. Menciónalo cuando de verdad corresponda: fuego activo cercano, punto en rojo o amarillo, o pregunta directa sobre incendios/riesgo de esa zona. El resto de veces, tema tranquilo (vegetación, curiosidades, tiempo), ni lo nombres.
+JERARQUÍA DE MANDO (innegociable): ante fuego activo, el 112 y la autoridad de extinción mandan; tú apoyas la decisión, nunca la sustituyes. En rojo o amarillo menciona 112 y Protección Civil/bomberos una vez, sin inventar teléfonos. En verde y temas tranquilos, no los nombres.
 
-ESTADO DEL PUNTO (rojo / amarillo / verde) — así lo interpretas siempre que venga en el contexto:
-- 🔴 ROJO = incendio activo confirmado por satélite (NASA FIRMS) en esa zona o muy cerca. Dilo de forma directa y clara desde la primera frase: que ahí mismo, o a tantos km, se está quemando ahora mismo, y si el usuario está cerca, que se aleje de la zona. No lo suavices ni lo dejes para el final.
-- 🟡 AMARILLO = sin incendio confirmado todavía, pero con estrés de biomasa alto (riesgo elevado): avisa de que es zona de vigilancia, explica por qué (sequedad, viento, temperatura) y qué la haría peligrosa si prendiera.
-- 🟢 VERDE = riesgo bajo-moderado, sin incendio ni alerta especial: puedes hablar en modo conversación normal.
-- Tanto en rojo como en amarillo, además de la lectura técnica, menciona los canales oficiales que correspondan: el 112 para cualquier emergencia real, y Protección Civil / los bomberos de la zona como referencia para reportar o pedir información — sin inventarte teléfonos ni datos concretos que no tengas.
+LECTURA DEL PUNTO — cuando llegue el contexto, interprétalo así:
+- ESTADO rojo = incendio activo por satélite (NASA FIRMS) confirmado a menos de 25 km o dentro del perímetro estimado. Empieza SIEMPRE por ahí: cuántos focos, a qué distancia el más cercano, y ordena alejarse si el usuario está cerca.
+- ESTADO amarillo = estrés de biomasa alto sin fuego confirmado: zona de vigilancia; explica por qué (sequedad del combustible fino, viento, calor) y qué lo haría peligroso si prendiera.
+- ESTADO verde = riesgo bajo-moderado: conversación normal.
 
-Cuando alguien pincha un punto en el mapa y pregunta qué pasa allí, respondes de inmediato con una lectura completa de la zona, usando los datos reales que te llegan (meteorológicos en tiempo real, satélite de incendios NASA FIRMS, OpenStreetMap, el estado del punto rojo/amarillo/verde, y si se incluye, un resumen de contexto sacado de internet sobre el lugar) combinados con tu conocimiento experto para rellenar cualquier hueco con inferencia razonada (por ejemplo: "no tengo el tipo exacto de vegetación etiquetado, pero por la zona y altitud es coherente con matorral mediterráneo/pinar de sierra"). Nunca dejas una pregunta sin una lectura completa, y nunca le devuelves la pregunta al usuario ni le pides más datos.
+CIENCIA QUE TE LLEGA (campos "ciencia" del contexto) — úsala siempre que exista, citando el número y la razón:
+- FFWI (Fosberg): peligro meteorológico instantáneo. <25 bajo, 25-49 moderado, 50-74 alto, >=75 extremo.
+- Humedad del combustible fino (1h): <6% el fuego prende con cualquier chispa y corre; 6-12% arde bien con viento; >15% cuesta sostener el frente.
+- ROS (Rothermel, m/min): velocidad potencial de la cabeza del fuego en ese combustible y pendiente. Tradúcela a sensaciones: >1 m/min no se le gana andando campo a través; >10 m/min supera a una persona corriendo.
+- Intensidad (kW/m): <500 se ataca directo con herramienta manual; 500-2000 necesita maquinaria/medios aéreos; >2000 ataque directo imposible en la cabeza.
+- Llama (m) y distancia de seguridad (>=4×llama, Butler & Cohen): espacio mínimo sin combustible para refugiarse.
+- Escape (azimuts): el fuego avanza a sotavento (cardinal de avance). La huida correcta es PERPENDICULAR al avance (hacia los flancos) o hacia la zona YA QUEMADA a barlovento; NUNCA sotavento ni cuesta arriba por vaguadas alineadas con el viento (efecto chimenea). Evita crestas, collados y canchales; terreno ya quemado, zonas rocosas, carreteras y láminas de agua son refugio.
+- Si falta la pendiente, advierte que en cuesta arriba el fuego puede duplicar velocidad cada ~15-20% de pendiente adicional.
 
-Datos que puedes recibir en el contexto: coordenadas, lugar aproximado, temperatura, humedad relativa, velocidad y dirección del viento, % de estrés de biomasa (modelo cuántico), estado del punto (rojo/amarillo/verde), humedad del suelo superficial, día/noche, vegetación cercana (OpenStreetMap), agua cercana, incendios activos por satélite en 25km, y un resumen adicional de la zona sacado de internet cuando los demás datos no alcanzan.
+FUEGO ACTIVO O PREGUNTA DE ESCAPE (rojo, o pregunta directa): responde en modo operativo, con este orden: 1) qué está pasando y hacia dónde corre; 2) si el usuario está en riesgo: ruta de escape concreta con cardinales (perpendicular al avance / hacia lo quemado), qué evitar y el criterio LCES (vigía, comunicaciones, rutas de escape, zonas de seguridad); 3) dónde NO meterse; 4) 112 y autoridad de extinción.
+
+GESTIÓN DE COMBUSTIBLE / LIMPIEZA DE MONTE (preguntas de prevención o de "dónde limpiar para que no se extienda"): da criterio técnico real:
+- Prioriza según el viento dominante del contexto: lo primero es la franja a SOTAVENTO del punto (hacia donde correría el fuego), después los flancos; la cola (barlovento) es lo último.
+- Anchos de trabajo reales: franja perimetral de 25 m en interfaz urbano-forestal (marco de la Ley 43/2003 de Montes y normativa autonómica), fajas auxiliares de 10-25 m, y en cabeza probable con ROS alta hace falta apoyarse en elementos existentes (pistas, cortafuegos, ríos, roquedo) porque una franja estrecha sola no para un frente con llamas de más de 1,5-2 m.
+- Técnicas: desbroce de matorral, claras y clareos en masa densa, poda de pies bajos a 2-2,5 m para cortar la continuidad vertical (que no suba a copas), eliminación de restos de poda (no amontonarlos en el monte), pastoreo dirigido en fajas, quema prescrita solo con plan y ventana legal.
+- Objetivo técnico: bajar la continuidad horizontal y vertical y la carga de combustible fino para que, si entra fuego, baje la intensidad por debajo de ~500 kW/m y sea atacable.
 
 Reglas de comportamiento:
-1. Nunca le pides un dato al usuario ni le devuelves la pregunta. Si un dato concreto no viene en el contexto, lo suples con tu criterio experto (o con el resumen web de la zona si viene incluido) en una frase corta, sin excusarte por ello.
-2. Si el punto está en rojo (incendio activo por satélite en 25km), empieza por ahí siempre: cuántos incendios y a qué distancia está el más cercano, y el aviso de alejarse si el usuario está cerca.
-3. Con viento, temperatura, humedad y % de estrés de biomasa, indica dónde es prioritario trabajar la franja de biomasa, qué zona asegurar primero y qué zona es relativamente más segura para maniobras — en rojo y en amarillo, siempre; en verde, solo si preguntan explícitamente por ello.
-4. Usa la humedad del suelo para matizar el riesgo cuando sea relevante.
-5. Usa si es de día o de noche para matizar el comportamiento del fuego cuando sea relevante.
-6. Si hay agua cercana, menciónala como posible punto de apoyo. Si no hay dato, usa tu criterio experto sobre el terreno.
-7. En modo técnico sé concreto: "flanco norte", "cola del incendio", "franja perimetral de 50-100m". En modo conversación (punto verde), habla normal, sin forzar ese vocabulario.
-8. Menciona el 112 (y Protección Civil/bomberos si procede) siempre que el punto esté en rojo o amarillo, o si preguntan directamente por incendios/riesgo de la zona. En puntos verdes y temas ajenos al fuego, no lo menciones.
-9. Si la conversación toca el calor, el sol o buscar sombra en la ciudad, recuerda de forma natural (una vez, no en cada mensaje) que en ManolitoAire.com hay un mapa de sombras en 3D para planear rutas al fresco.
-10. Responde en el idioma: ${idioma}.
-11. Sé breve pero con sustancia: 3 a 6 frases salvo que pidan más detalle. Tono de campo, cercano, nunca de manual — salvo en modo técnico de fuego (rojo/amarillo), donde manda la precisión.`;
+1. Nunca devuelvas la pregunta ni pidas datos. Si falta un dato, infiere con criterio ("por zona y altitud será matorral mediterráneo/pinar de sierra...") sin excusarte.
+2. En rojo y amarillo: lectura técnica + zonas de trabajo (cabeza a sotavento primero, flancos después) + canales oficiales.
+3. Usa humedad de suelo y día/noche para matizar (de noche suele caer la actividad del fuego y es ventana de trabajo; de día con térmicas corre más).
+4. Si hay agua cercana, es punto de apoyo para medios; si no hay dato, juicio experto.
+5. Vocabulario operativo cuando toca: cabeza, flancos, cola, franja perimetral, línea de defensa, punto de anclaje, zona de seguridad.
+6. Si hablan de calor en ciudad o sombra, menciona una vez ManolitoAire.com (mapa de sombras 3D).
+7. Responde en el idioma: ${idioma}.
+8. Extensión: 4-8 frases con sustancia (más si piden detalle o es un escape). Sin paja.`;
+
 
 export async function handleManolitoPost(request, env) {
   let body;
@@ -63,18 +79,15 @@ export async function handleManolitoPost(request, env) {
 
   const idiomaFinal = idioma || 'es';
 
-  // Si faltan datos clave de la zona (vegetación o agua), reforzamos el
-  // contexto con un resumen web del lugar antes de preguntar al modelo.
   let contextoWebTexto = null;
   if (contexto && contexto.lugar && (!contexto.vegetacion || contexto.aguaCercana === undefined || contexto.aguaCercana === null)) {
     contextoWebTexto = await buscarContextoWeb(contexto.lugar);
   }
 
   const contextoTexto = contexto ? formatearContexto(contexto, contextoWebTexto) : 'Sin datos de zona seleccionados todavía.';
-
   const userContent = `CONTEXTO ACTUAL DE LA ZONA:\n${contextoTexto}\n\nPREGUNTA DEL USUARIO:\n${message}`;
 
-  // 1) MOTOR PRINCIPAL: Cloudflare Workers AI (binding "AI" en wrangler.toml)
+  // 1) Cloudflare Workers AI
   if (env.AI) {
     try {
       const salidaAI = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
@@ -82,23 +95,21 @@ export async function handleManolitoPost(request, env) {
           { role: 'system', content: SYSTEM_PROMPT(idiomaFinal) },
           { role: 'user', content: userContent }
         ],
-        max_tokens: 500,
-        temperature: 0.5
+        max_tokens: 700,
+        temperature: 0.4
       });
       const respuesta = salidaAI?.response;
       if (respuesta && !esRespuestaEvasiva(respuesta)) {
-        console.log(`[Manolito] Respondiendo con motor: cloudflare-ai`);
+        console.log(`[Manolito] motor: cloudflare-ai`);
         return jsonResponse({ respuesta, motor: 'cloudflare-ai' });
       }
     } catch (e) {
-      console.error(`[Manolito] Fallo en motor cloudflare-ai:`, e.message);
-      // Cae al siguiente motor
+      console.error(`[Manolito] Fallo cloudflare-ai:`, e.message);
     }
   }
 
-  // 2) MOTOR DE RESPALDO: OpenRouter (si hay clave configurada)
+  // 2) OpenRouter
   const apiKey = env.OPENROUTER_API_KEY;
-
   if (apiKey) {
     try {
       const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -115,28 +126,26 @@ export async function handleManolitoPost(request, env) {
             { role: 'system', content: SYSTEM_PROMPT(idiomaFinal) },
             { role: 'user', content: userContent }
           ],
-          max_tokens: 500,
-          temperature: 0.5
+          max_tokens: 700,
+          temperature: 0.4
         })
       });
-
       if (resp.ok) {
         const data = await resp.json();
         const respuesta = data?.choices?.[0]?.message?.content;
         if (respuesta && !esRespuestaEvasiva(respuesta)) {
-          console.log(`[Manolito] Respondiendo con motor: openrouter`);
+          console.log(`[Manolito] motor: openrouter`);
           return jsonResponse({ respuesta, motor: 'openrouter' });
         }
       } else {
-        console.warn(`[Manolito] Motor openrouter respondió con status ${resp.status}`);
+        console.warn(`[Manolito] openrouter status ${resp.status}`);
       }
     } catch (e) {
-      console.error(`[Manolito] Fallo en motor openrouter:`, e.message);
-      // Cae al fallback
+      console.error(`[Manolito] Fallo openrouter:`, e.message);
     }
   }
 
-  // 3) ÚLTIMO MOTOR DE IA: Pollinations (gratuito, sin API key)
+  // 3) Pollinations (gratuito)
   try {
     const promptCompleto = `${SYSTEM_PROMPT(idiomaFinal)}\n\n${userContent}`;
     const url = `https://text.pollinations.ai/${encodeURIComponent(promptCompleto)}`;
@@ -144,23 +153,20 @@ export async function handleManolitoPost(request, env) {
     if (resp.ok) {
       const texto = await resp.text();
       if (texto && !esRespuestaEvasiva(texto)) {
-        console.log(`[Manolito] Respondiendo con motor: pollinations`);
+        console.log(`[Manolito] motor: pollinations`);
         return jsonResponse({ respuesta: texto, motor: 'pollinations' });
       }
     }
   } catch (e) {
-    console.error(`[Manolito] Fallo en motor pollinations:`, e.message);
-    // sigue al informe local
+    console.error(`[Manolito] Fallo pollinations:`, e.message);
   }
 
-  // Último recurso: informe generado localmente a partir de los datos reales
-  // de la zona, sin depender de ningún modelo de IA. Nunca pregunta nada.
+  // 4) Informe local determinista (nunca falla)
   if (contexto && typeof contexto.lat === 'number') {
-    console.log(`[Manolito] Respondiendo con motor: local (fallback)`);
+    console.log(`[Manolito] motor: local (fallback)`);
     return jsonResponse({ respuesta: generarLecturaLocal(contexto, contextoWebTexto), motor: 'local' });
   }
 
-  console.error(`[Manolito] Todos los motores fallaron. No hay contexto para respuesta local.`);
   return jsonResponse({
     error: 'No se pudo contactar con el motor de Manolito. Inténtalo de nuevo en unos segundos.'
   }, 502);
@@ -176,11 +182,8 @@ export function handleManolitoOptions() {
   });
 }
 
-// Determina el estado del punto (rojo/amarillo/verde) igual que se pinta
-// en el mapa: rojo = incendio activo confirmado por satélite; amarillo =
-// sin fuego confirmado pero con estrés de biomasa alto; verde = tranquilo.
 function determinarEstadoPunto(c) {
-  if (c.incendiosActivosCercanos > 0) {
+  if (c.incendiosActivosCercanos > 0 || (c.perimetroEstimado && c.perimetroEstimado.dentro)) {
     return { color: 'rojo', etiqueta: '🔴 INCENDIO ACTIVO' };
   }
   const pct = parseFloat(c.pct);
@@ -190,9 +193,6 @@ function determinarEstadoPunto(c) {
   return { color: 'verde', etiqueta: '🟢 riesgo bajo-moderado' };
 }
 
-// Refuerzo de contexto: cuando faltan datos clave de la zona (vegetación,
-// agua...), busca un resumen breve del lugar en Wikipedia para que Manolito
-// tenga algo real con lo que hablar en vez de inventar a ciegas.
 async function buscarContextoWeb(lugar) {
   if (!lugar) return null;
   try {
@@ -214,92 +214,78 @@ async function buscarContextoWeb(lugar) {
 function esRespuestaEvasiva(texto) {
   const t = texto.toLowerCase();
   const patronesEvasivos = [
-    'no tengo suficiente informaci',
-    'podrías proporcionar',
-    'podrias proporcionar',
-    'necesito más informaci',
-    'necesito mas informaci',
-    'necesitaría saber',
-    'necesitaria saber',
-    'me puedes dar más',
-    'me puedes dar mas',
-    'podrías darme',
-    'podrias darme',
-    '¿podrías',
-    '¿podrias',
+    'no tengo suficiente informaci', 'podrías proporcionar', 'podrias proporcionar',
+    'necesito más informaci', 'necesito mas informaci', 'necesitaría saber',
+    'necesitaria saber', 'me puedes dar más', 'me puedes dar mas',
+    'podrías darme', 'podrias darme', '¿podrías', '¿podrias',
     'no dispongo de suficiente'
   ];
   if (patronesEvasivos.some(p => t.includes(p))) return true;
-  // Si termina en signo de interrogación y es un texto corto, es sospechoso de estar
-  // devolviendo la pregunta en vez de dar una lectura técnica.
   const trimmed = texto.trim();
   if (trimmed.endsWith('?') && trimmed.length < 400) return true;
   return false;
 }
 
-// Informe determinista generado solo con los datos reales de la zona,
-// sin ningún modelo de IA de por medio. Es el último recurso: garantiza
-// que Manolito SIEMPRE da una lectura completa y nunca pregunta nada.
-// El aviso del 112 solo aparece si el punto está en rojo o amarillo.
+// ---------- Informe local sin IA: usa los números reales del motor ----------
 function generarLecturaLocal(c, contextoWebTexto) {
   const lineas = [];
   const lugar = c.lugar || `${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`;
   const estado = determinarEstadoPunto(c);
-  const hayIncendioActivo = estado.color === 'rojo';
-  const esAmarillo = estado.color === 'amarillo';
+  const rojo = estado.color === 'rojo';
+  const amarillo = estado.color === 'amarillo';
+  const s = c.ciencia || null;
 
   lineas.push(`Estado del punto en ${lugar}: ${estado.etiqueta}`);
 
-  if (hayIncendioActivo) {
-    lineas.push(`🔥 Incendios activos detectados por satélite en 25km: ${c.incendiosActivosCercanos}, el más cercano a ${c.distanciaIncendioMasCercanoKm} km. Si estás cerca, aléjate de la zona ahora mismo.`);
-  } else if (esAmarillo) {
-    lineas.push('No hay incendio confirmado todavía, pero el estrés de biomasa es alto: zona de vigilancia, condiciones favorables a que un fuego prenda y se propague rápido.');
+  if (rojo) {
+    if (c.perimetroEstimado && c.perimetroEstimado.dentro) {
+      lineas.push(`⚠ El punto está DENTRO del perímetro estimado de un incendio activo (foco de ~${c.perimetroEstimado.areaHa.toFixed(1)} ha). Si estás ahí, vete ya.`);
+    } else if (c.incendiosActivosCercanos > 0) {
+      lineas.push(`🔥 Incendios activos por satélite en 25 km: ${c.incendiosActivosCercanos}, el más cercano a ${c.distanciaIncendioMasCercanoKm} km.`);
+    }
+  } else if (amarillo) {
+    lineas.push('Sin incendio confirmado todavía, pero el estrés de biomasa es alto: si prende, las condiciones de hoy le dejan correr.');
   } else if (c.incendiosActivosCercanos === 0) {
-    lineas.push('No hay incendios activos detectados por satélite (NASA FIRMS) en 25km ahora mismo, tranquilidad en ese frente.');
+    lineas.push('Sin incendios activos por satélite (NASA FIRMS) en 25 km ahora mismo.');
   }
 
-  if (typeof c.pct === 'number' || typeof c.pct === 'string') {
-    const pct = parseFloat(c.pct);
-    let nivel = 'bajo';
-    if (pct >= 75) nivel = 'crítico';
-    else if (pct >= 40) nivel = 'moderado-alto';
-    lineas.push(`Estrés de biomasa: ${c.pct}% (nivel ${nivel}).`);
+  if (c.pct !== undefined) lineas.push(`Estrés de biomasa (modelo cuántico): ${c.pct}%.`);
+
+  if (s) {
+    lineas.push(`Peligro meteorológico Fosberg (FFWI): ${s.ffwi} (${s.ffwiNivel}). Humedad del combustible fino: ${s.humedadCombustible1h}%${s.humedadCombustible1h < 6 ? ' — prende con cualquier chispa' : ''}.`);
+    if (s.combustible) lineas.push(`Combustible estimado: ${s.combustible.nombre}, ~${s.combustible.cargaTHa} t/ha de combustible fino superficial (modelo Anderson ${s.combustible.modeloId}).`);
+    if (s.rosMMin !== null) {
+      lineas.push(`Si prende aquí: cabeza del fuego a ~${s.rosMMin} m/min (${s.rosKmh} km/h)${s.pendientePct !== null ? ` con pendiente del ${s.pendientePct}%` : ' en llano'}, llamas de ~${s.llamaM} m, intensidad ~${s.intensidadKwM} kW/m. ${s.intensidadKwM < 500 ? 'Atacable con medios manuales.' : s.intensidadKwM < 2000 ? 'Requiere maquinaria o medios aéreos.' : 'Ataque directo a la cabeza IMPOSIBLE: solo flancos y cola.'} Distancia de seguridad mínima: ${s.distanciaSeguridadM} m sin combustible.`);
+    }
+    if (s.escape && (rojo || amarillo)) {
+      lineas.push(`ESCAPE: el fuego avanza hacia el ${s.escape.cardAvance}. Muévete PERPENDICULAR (${s.escape.cardFlancoA} o ${s.escape.cardFlancoB}) o hacia lo ya quemado a barlovento (${s.escape.cardBarlovento}). Jamás hacia el ${s.escape.cardAvance} ni cuesta arriba por vaguadas alineadas con el viento. Busca roquedo, carretera, zona quemada o lámina de agua como refugio.`);
+    }
+    if (s.escape && !rojo && !amarillo) {
+      lineas.push(`Si algún día prende con este viento: correría hacia el ${s.escape.cardAvance}; la limpieza prioritaria es la franja a sotavento (${s.escape.cardAvance}) y después los flancos (${s.escape.cardFlancoA}/${s.escape.cardFlancoB}).`);
+    }
   }
 
   if (typeof c.temp !== 'undefined') {
-    lineas.push(`Temperatura ${c.temp}°C, humedad relativa ${c.hum}%, viento ${c.wind} km/h${c.windDirCardinal ? ' procedente del ' + c.windDirCardinal : ''}.`);
+    lineas.push(`Meteo ahora: ${c.temp}°C, HR ${c.hum}%, viento ${c.wind} km/h${c.windDirCardinal ? ' del ' + c.windDirCardinal : ''}.${c.temp >= 30 && c.hum <= 30 && c.wind >= 30 ? ' Regla 30-30-30 cumplida: día de comportamiento extremo.' : ''}`);
   }
-
-  if (hayIncendioActivo && typeof c.windDir === 'number') {
-    const azAvance = (c.windDir + 180) % 360;
-    const cardAvance = gradosACardinal(azAvance);
-    lineas.push(`Con este viento, un incendio en este punto avanzaría hacia el ${cardAvance}: prioriza cortafuegos en esa dirección (cabeza) y trabaja los flancos perpendiculares; la zona a barlovento (${gradosACardinal(c.windDir)}) es la relativamente más segura para maniobras de apoyo.`);
-  }
-
   if (c.humedadSuelo !== undefined && c.humedadSuelo !== null) {
-    lineas.push(`Humedad del suelo superficial: ${c.humedadSuelo} m³/m³ (${c.humedadSuelo < 0.15 ? 'suelo seco, agrava disponibilidad de combustible' : 'suelo con humedad moderada'}).`);
+    lineas.push(`Humedad del suelo superficial: ${c.humedadSuelo} m³/m³ (${c.humedadSuelo < 0.15 ? 'suelo seco, agrava la disponibilidad del combustible' : 'suelo con humedad moderada'}).`);
   }
-
   if (c.esDia !== undefined && c.esDia !== null) {
     lineas.push(c.esDia
-      ? 'Es de día: mayor temperatura y térmicas pueden intensificar el viento y acelerar la propagación.'
-      : 'Es de noche: normalmente baja la temperatura y sube la humedad, lo que puede facilitar la contención, aunque la visibilidad reducida complica la maniobra.');
+      ? 'De día: térmicas y viento pueden acelerar la propagación.'
+      : 'De noche: el fuego suele bajar de actividad — es la ventana de trabajo de las brigadas.');
   }
-
-  if (c.vegetacion) {
-    lineas.push(`Vegetación cercana (OpenStreetMap): ${c.vegetacion}.`);
-  } else if (contextoWebTexto) {
-    lineas.push(`Sobre la zona: ${contextoWebTexto}`);
-  }
-
+  if (c.vegetacion) lineas.push(`Vegetación (OSM): ${c.vegetacion}.`);
+  else if (contextoWebTexto) lineas.push(`Sobre la zona: ${contextoWebTexto}`);
   if (c.aguaCercana !== undefined && c.aguaCercana !== null) {
     lineas.push(c.aguaCercana
-      ? 'Hay agua cercana (río/embalse/laguna en 3km): posible punto de apoyo para medios aéreos o mangueras.'
-      : 'No se ha detectado agua cercana en 3km en OpenStreetMap.');
+      ? 'Agua cercana en 3 km: posible punto de apoyo para medios y refugio parcial.'
+      : 'Sin agua cercana detectada en 3 km (OSM).');
   }
 
-  if (hayIncendioActivo || esAmarillo) {
-    lineas.push('Este es un modelo de apoyo a la decisión; no sustituye la orden de mando de bomberos ni de Protección Civil. Ante fuego activo o dudas sobre esta zona, llama al 112 o contacta con Protección Civil/bomberos.');
+  if (rojo || amarillo) {
+    lineas.push('Esto es un modelo de apoyo a la decisión: ante fuego real manda la autoridad de extinción. Emergencias: 112.');
   }
 
   return lineas.join('\n\n');
@@ -314,27 +300,47 @@ function formatearContexto(c, contextoWebTexto) {
   if (c.temp !== undefined) partes.push(`Temperatura: ${c.temp}°C`);
   if (c.hum !== undefined) partes.push(`Humedad relativa del aire: ${c.hum}%`);
   if (c.wind !== undefined) partes.push(`Velocidad del viento: ${c.wind} km/h`);
-  if (c.windDir !== undefined) partes.push(`Dirección del viento (origen, grados): ${c.windDir}° (${gradosACardinal(c.windDir)})`);
+  if (c.windDir !== undefined) partes.push(`Dirección del viento (origen): ${c.windDir}° (${gradosACardinal(c.windDir)})`);
   if (c.pct !== undefined) partes.push(`Estrés de biomasa (modelo cuántico): ${c.pct}%`);
   if (c.humedadSuelo !== undefined && c.humedadSuelo !== null) partes.push(`Humedad del suelo superficial (0-1cm): ${c.humedadSuelo} m³/m³`);
-  if (c.esDia !== undefined && c.esDia !== null) partes.push(`Momento del día: ${c.esDia ? 'de día' : 'de noche'}`);
-  if (c.vegetacion) partes.push(`Vegetación cercana (OpenStreetMap): ${c.vegetacion}`);
-  if (c.aguaCercana !== undefined && c.aguaCercana !== null) partes.push(`Agua cercana (río/embalse/laguna en 3km): ${c.aguaCercana ? 'sí' : 'no detectada'}`);
-  if (c.incendiosActivosCercanos !== undefined && c.incendiosActivosCercanos !== null) {
-    if (c.incendiosActivosCercanos > 0) {
-      partes.push(`INCENDIOS ACTIVOS DETECTADOS POR SATÉLITE (NASA FIRMS) en 25km: ${c.incendiosActivosCercanos}, el más cercano a ${c.distanciaIncendioMasCercanoKm} km.`);
-    } else {
-      partes.push('Incendios activos detectados por satélite (NASA FIRMS) en 25km: ninguno.');
+  if (c.esDia !== undefined && c.esDia !== null) partes.push(`Momento: ${c.esDia ? 'de día' : 'de noche'}`);
+  if (c.vegetacion) partes.push(`Vegetación cercana (OSM): ${c.vegetacion}`);
+  if (c.aguaCercana !== undefined && c.aguaCercana !== null) partes.push(`Agua cercana (3 km): ${c.aguaCercana ? 'sí' : 'no detectada'}`);
+
+  // ---- Capa científica calculada en el frontend ----
+  const s = c.ciencia;
+  if (s) {
+    partes.push(`CIENCIA DEL PUNTO (cálculos reales, no estimaciones):`);
+    partes.push(`- FFWI (Fosberg): ${s.ffwi} (${s.ffwiNivel})`);
+    partes.push(`- Humedad combustible fino 1h: ${s.humedadCombustible1h}%`);
+    if (s.combustible) partes.push(`- Modelo de combustible: Anderson ${s.combustible.modeloId} (${s.combustible.nombre}), carga ~${s.combustible.cargaTHa} t/ha`);
+    if (s.rosMMin !== null) {
+      partes.push(`- ROS (Rothermel): ${s.rosMMin} m/min = ${s.rosKmh} km/h${s.pendientePct !== null ? ` (pendiente ${s.pendientePct}%)` : ' (llano asumido)'}`);
+      partes.push(`- Intensidad (Byram): ${s.intensidadKwM} kW/m; llama ~${s.llamaM} m; distancia de seguridad >= ${s.distanciaSeguridadM} m`);
+    }
+    if (s.escape) {
+      partes.push(`- El fuego avanzaría hacia: ${s.escape.cardAvance} (${s.escape.azAvance}°)`);
+      partes.push(`- Escape perpendicular: ${s.escape.cardFlancoA} (${s.escape.azFlancoA}°) o ${s.escape.cardFlancoB} (${s.escape.azFlancoB}°); refugio a barlovento: ${s.escape.cardBarlovento} (${s.escape.azBarlovento}°)`);
     }
   }
-  if (contextoWebTexto) {
-    partes.push(`Resumen de la zona (refuerzo web, usar solo si faltan datos arriba): ${contextoWebTexto}`);
+
+  if (c.perimetroEstimado && c.perimetroEstimado.dentro) {
+    partes.push(`⚠ EL PUNTO ESTÁ DENTRO DEL PERÍMETRO ESTIMADO DE UN INCENDIO ACTIVO (foco ~${c.perimetroEstimado.areaHa.toFixed(1)} ha).`);
+  } else if (c.incendiosActivosCercanos !== undefined && c.incendiosActivosCercanos !== null) {
+    partes.push(c.incendiosActivosCercanos > 0
+      ? `INCENDIOS ACTIVOS (NASA FIRMS) en 25 km: ${c.incendiosActivosCercanos}, más cercano a ${c.distanciaIncendioMasCercanoKm} km.`
+      : 'Incendios activos (NASA FIRMS) en 25 km: ninguno.');
   }
-  return partes.length ? partes.join('\n') : 'Sin datos de zona seleccionados todavía.';
+  if (c.zonasPrioritarias) {
+    const z = c.zonasPrioritarias;
+    partes.push(`Zonas prioritarias a asegurar: cabeza (${z.cabeza?.lugar || 'sin nombre'}: ${z.cabeza?.lat?.toFixed(4)}, ${z.cabeza?.lon?.toFixed(4)}), flanco der. (${z.flancoDer?.lugar || 'sin nombre'}), flanco izq. (${z.flancoIzq?.lugar || 'sin nombre'})`);
+  }
+  if (contextoWebTexto) partes.push(`Resumen de la zona (refuerzo web): ${contextoWebTexto}`);
+  return partes.join('\n');
 }
 
 function gradosACardinal(deg) {
-  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
   return dirs[Math.round(deg / 22.5) % 16];
 }
 

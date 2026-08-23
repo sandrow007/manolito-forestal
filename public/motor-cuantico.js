@@ -419,11 +419,60 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
         humedadSuelo: (typeof humedadSuelo === 'number') ? humedadSuelo : null,
         esDia: (typeof esDia === 'boolean') ? esDia : null,
         vegetacion: null,
+        tipoCubierta: null,
         aguaCercana: null,
+        pendientePct: null,
+        ciencia: null,
         perimetroEstimado,
         zonasPrioritarias,
         recomendacionTexto: textoRecomendacionFinal
     };
+
+    // Capa científica real (Fosberg + Rothermel + Byram): primera pasada
+    // con terreno llano, y en cuanto se estima la pendiente real del
+    // terreno (API de elevación de Open-Meteo) se recalcula.
+    recalcularCienciaFuego();
+    if (typeof windDir === 'number' && window.MotorFuego) {
+        const az = azimutPropagacion(windDir);
+        window.MotorFuego.estimarPendiente(lat, lon, az).then(p => {
+            const c = window.ultimoContextoManolito;
+            if (c && c.lat === lat && c.lon === lon && typeof p === 'number') {
+                c.pendientePct = p;
+                recalcularCienciaFuego();
+            }
+        }).catch(() => {});
+    }
+}
+
+// Recalcula la capa científica cada vez que llega un dato nuevo
+// (vegetación de OSM, pendiente real...) y actualiza el panel y el
+// contexto que lee Manolito. Es el "método más preciso que existe":
+// Rothermel es el estándar operativo mundial (BehavePlus/FARSITE).
+function recalcularCienciaFuego() {
+    const c = window.ultimoContextoManolito;
+    const div = document.getElementById('ui-ciencia-texto');
+    if (!c || !window.MotorFuego) return;
+    c.ciencia = window.MotorFuego.evaluarPunto({
+        tempC: c.temp, humPct: c.hum, windKmh: c.wind,
+        windDir: c.windDir, vegetacionTexto: c.vegetacion,
+        tipoCubierta: c.tipoCubierta, pendientePct: c.pendientePct
+    });
+    const s = c.ciencia;
+    if (!s || !div) return;
+    const lineas = [
+        `<b>Análisis científico (Fosberg / Rothermel / Byram)</b>`,
+        `▸ Peligro meteorológico FFWI: <b>${s.ffwi}</b> (${s.ffwiNivel})`,
+        `▸ Humedad del combustible fino (1h): ${s.humedadCombustible1h}%`
+    ];
+    if (s.combustible) lineas.push(`▸ Combustible estimado: ${s.combustible.nombre} (~${s.combustible.cargaTHa} t/ha de combustible fino superficial)`);
+    if (s.rosMMin !== null) {
+        lineas.push(`▸ Propagación potencial: <b>${s.rosMMin} m/min</b> (${s.rosKmh} km/h)${s.pendientePct !== null ? ` con pendiente del ${s.pendientePct}%` : ' en llano'}`);
+        lineas.push(`▸ Intensidad: ${s.intensidadKwM} kW/m · Llama ~${s.llamaM} m · Distancia de seguridad ≥ ${s.distanciaSeguridadM} m (Butler-Cohen)`);
+    }
+    if (s.escape) {
+        lineas.push(`▸ Si prendiera aquí: avanzaría hacia el <b>${s.escape.cardAvance}</b>. Huida: perpendicular (${s.escape.cardFlancoA} o ${s.escape.cardFlancoB}) o hacia lo ya quemado (${s.escape.cardBarlovento}). Nunca hacia el ${s.escape.cardAvance}.`);
+    }
+    div.innerHTML = lineas.join('<br>');
 }
 
 // 6a. OVERPASS CON RESPALDO (varios espejos + timeout)
@@ -456,6 +505,10 @@ async function consultarOverpass(query, timeoutMs = 8000) {
 }
 
 // 6b. CONTEXTO AMPLIADO: vegetación y agua cercana
+// Además de nombres de especies, ahora también devuelve la CUBIERTA
+// dominante (bosque / matorral / hierba), que es lo que el motor
+// científico (motor-fuego-cientifico.js) usa para elegir el modelo de
+// combustible de Anderson con el que calcula la propagación real.
 async function obtenerContextoTerreno(lat, lon) {
     const radioMetros = 3000;
     const query = `
@@ -463,6 +516,10 @@ async function obtenerContextoTerreno(lat, lon) {
         (
           nwr["natural"="wood"](around:${radioMetros},${lat},${lon});
           nwr["landuse"="forest"](around:${radioMetros},${lat},${lon});
+          nwr["natural"="scrub"](around:${radioMetros},${lat},${lon});
+          nwr["natural"="heath"](around:${radioMetros},${lat},${lon});
+          nwr["natural"="grassland"](around:${radioMetros},${lat},${lon});
+          nwr["landuse"="meadow"](around:${radioMetros},${lat},${lon});
           nwr["natural"="water"](around:${radioMetros},${lat},${lon});
           nwr["waterway"="river"](around:${radioMetros},${lat},${lon});
           nwr["landuse"="reservoir"](around:${radioMetros},${lat},${lon});
@@ -472,15 +529,20 @@ async function obtenerContextoTerreno(lat, lon) {
 
     const data = await consultarOverpass(query);
     if (!data) {
-        return { vegetacion: 'No disponible (fallo de consulta a OpenStreetMap)', aguaCercana: null };
+        return { vegetacion: 'No disponible (fallo de consulta a OpenStreetMap)', aguaCercana: null, tipoCubierta: null };
     }
 
     const especies = new Set();
     let hayAgua = false;
+    let hayBosque = false, hayMatorral = false, hayHierba = false;
+    let leafType = null;
     (data.elements || []).forEach(el => {
         const tags = el.tags || {};
         if (tags.natural === 'water' || tags.waterway === 'river' || tags.landuse === 'reservoir') hayAgua = true;
-        if (tags.leaf_type) especies.add(tags.leaf_type);
+        if (tags.natural === 'wood' || tags.landuse === 'forest') hayBosque = true;
+        if (tags.natural === 'scrub' || tags.natural === 'heath') hayMatorral = true;
+        if (tags.natural === 'grassland' || tags.landuse === 'meadow') hayHierba = true;
+        if (tags.leaf_type) { especies.add(tags.leaf_type); leafType = tags.leaf_type; }
         if (tags.species) especies.add(tags.species);
         if (tags.genus) especies.add(tags.genus);
     });
@@ -488,11 +550,23 @@ async function obtenerContextoTerreno(lat, lon) {
     let tipoVegetacion = 'No determinado con precisión (sin etiquetado detallado en OpenStreetMap para este punto)';
     if (especies.size > 0) {
         tipoVegetacion = Array.from(especies).join(', ');
-    } else if ((data.elements || []).some(el => (el.tags || {}).natural === 'wood' || (el.tags || {}).landuse === 'forest')) {
+    } else if (hayBosque) {
         tipoVegetacion = 'Masa forestal genérica (sin especie detallada en OSM)';
+    } else if (hayMatorral) {
+        tipoVegetacion = 'Matorral (scrub/heath en OSM)';
+    } else if (hayHierba) {
+        tipoVegetacion = 'Herbazal (grassland/meadow en OSM)';
     }
 
-    return { vegetacion: tipoVegetacion, aguaCercana: hayAgua };
+    // Cubierta dominante para el modelo de combustible: manda lo que
+    // más inflamabilidad representa (el matorral arde peor que el bosque).
+    let tipoCubierta = null;
+    if (hayMatorral) tipoCubierta = 'scrub';
+    else if (hayBosque) tipoCubierta = leafType === 'needleleaved' ? 'needleleaved'
+                                   : leafType === 'broadleaved' ? 'broadleaved' : 'forest';
+    else if (hayHierba) tipoCubierta = 'grass';
+
+    return { vegetacion: tipoVegetacion, aguaCercana: hayAgua, tipoCubierta };
 }
 
 // 6c. FETCH CON REINTENTOS (clima) — para que nunca se quede colgado
@@ -584,6 +658,8 @@ async function obtenerDatosClimaticos(lat, lon) {
             if (window.ultimoContextoManolito && window.ultimoContextoManolito.lat === lat && window.ultimoContextoManolito.lon === lon) {
                 window.ultimoContextoManolito.vegetacion = terreno.vegetacion;
                 window.ultimoContextoManolito.aguaCercana = terreno.aguaCercana;
+                window.ultimoContextoManolito.tipoCubierta = terreno.tipoCubierta;
+                recalcularCienciaFuego(); // recalcula Rothermel con el modelo de combustible correcto
             }
         }).catch(() => {});
 

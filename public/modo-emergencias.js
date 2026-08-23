@@ -268,6 +268,25 @@
       font-size: 20px;
       cursor: pointer;
     }
+
+    .me-fila-alarmas {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .me-btn-alarma {
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: 10px;
+      border: 1px solid var(--me-borde);
+      background: #1b1f29;
+      color: var(--me-texto);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .me-btn-alarma:active { background: #262c3a; }
+    .me-btn-alarma-stop { flex: 0 0 52px; }
   `;
 
   // ============================================================
@@ -295,6 +314,12 @@
 
         <button id="me-btn-toggle">Activar modo emergencia</button>
 
+        <div class="me-fila-alarmas">
+          <button class="me-btn-alarma" id="me-btn-sirena" title="Sirena audible para que personas cercanas te localicen">🔊 Sirena</button>
+          <button class="me-btn-alarma" id="me-btn-sos" title="SOS en morse, audible (··· −−− ···)">🆘 SOS sonoro</button>
+          <button class="me-btn-alarma me-btn-alarma-stop" id="me-btn-silencio" title="Callar todas las alarmas">🔇</button>
+        </div>
+
         <div id="me-estado"><span class="me-punto"></span><span id="me-estado-txt">Modo desactivado</span></div>
         <div id="me-mi-id"></div>
 
@@ -314,7 +339,24 @@
   // ============================================================
   // 3. LÓGICA
   // ============================================================
-  const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  // STUN solo descubre tu IP pública. En redes móviles con NAT
+  // simétrico (muy común en 4G/5G) STUN NO BASTA y WebRTC no conecta:
+  // hace falta un servidor TURN que retransmita el tráfico. Si tienes
+  // uno, configúralo en tu index.html ANTES de este script:
+  //
+  //   <script>
+  //     window.MANOLIT_TURN = {
+  //       urls: 'turn:tu-servidor-turn.com:3478',
+  //       username: 'usuario',
+  //       credential: 'clave'
+  //     };
+  //   </script>
+  const RTC_CONFIG = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ].concat(window.MANOLIT_TURN ? [window.MANOLIT_TURN] : [])
+  };
   const INTERVALO_SONDEO_MS = 1500; // cada cuánto pregunta al Worker si hay mensajes
 
   class GestorEmergencia {
@@ -324,6 +366,7 @@
       this.conexiones = new Map(); // id remoto -> { pc, canalDatos, estado }
       this._timerSondeo = null;
       this._meshVistos = new Map(); // ids de mensajes de emergencia ya procesados
+      this._candidatosPendientes = new Map(); // id remoto -> candidatos ICE que llegaron antes que la oferta/respuesta
       this._montarUI();
     }
 
@@ -355,6 +398,21 @@
       this.$overlay.addEventListener('click', (e) => { if (e.target === this.$overlay) this.$overlay.classList.remove('me-abierto'); });
       this.$toggle.addEventListener('click', () => this.activo ? this.desactivar() : this.activar());
       this.$enviar.addEventListener('click', () => this._enviarPrueba());
+
+      // Alarmas audibles: para que PERSONAS te oigan (la baliza
+      // ultrasónica es para que te detecten otros móviles).
+      const btnSirena = document.getElementById('me-btn-sirena');
+      const btnSos = document.getElementById('me-btn-sos');
+      const btnSilencio = document.getElementById('me-btn-silencio');
+      if (btnSirena) btnSirena.addEventListener('click', () => {
+        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.emitirSirena(8); this._log('🔊 Sirena audible emitiendo (8 s)'); }
+      });
+      if (btnSos) btnSos.addEventListener('click', () => {
+        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.emitirSOSMorse(); this._log('🆘 SOS en morse emitiendo'); }
+      });
+      if (btnSilencio) btnSilencio.addEventListener('click', () => {
+        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.pararAlarmas(); this._log('🔇 Alarmas detenidas'); }
+      });
     }
 
     _log(msg) {
@@ -415,7 +473,15 @@
 
     // ---------- DETECCIÓN POR ULTRASONIDO ----------
     _alDetectarDispositivo(idRemoto) {
-      if (this.conexiones.has(idRemoto)) return; // ya en curso
+      // Si ya hay conexión viva o en curso, no duplicar; pero si FALLÓ
+      // y el móvil sigue emitiendo su baliza, se reintenta solo.
+      if (this.conexiones.has(idRemoto)) {
+        const previa = this.conexiones.get(idRemoto);
+        if (previa.estado !== 'fallo') return;
+        try { previa.pc.close(); } catch (e) {}
+        this.conexiones.delete(idRemoto);
+        this._log(`🔄 Reintentando conexión con ${idRemoto}...`);
+      }
       this._log(`📡 Dispositivo detectado cerca: ${idRemoto}`);
       this._actualizarBadge(idRemoto, 'buscando');
 
@@ -481,9 +547,24 @@
           info = this.conexiones.get(idRemoto);
         }
         await info.pc.setRemoteDescription(new RTCSessionDescription(mensaje.sdp));
+        await this._vaciarCandidatosPendientes(idRemoto, info);
         const respuesta = await info.pc.createAnswer();
         await info.pc.setLocalDescription(respuesta);
         this._enviarSenal(idRemoto, { tipo: 'respuesta', sdp: info.pc.localDescription });
+        return;
+      }
+
+      // Cloudflare KV no garantiza el orden de entrega: un candidato ICE
+      // puede llegar ANTES que la oferta/respuesta a la que pertenece.
+      // Antes se descartaba en silencio y la conexión moría sin motivo
+      // aparente. Ahora se encola y se aplica cuando toca.
+      if (mensaje.tipo === 'candidato') {
+        if (!info || !info.pc.remoteDescription) {
+          if (!this._candidatosPendientes.has(idRemoto)) this._candidatosPendientes.set(idRemoto, []);
+          this._candidatosPendientes.get(idRemoto).push(mensaje.candidato);
+          return;
+        }
+        try { await info.pc.addIceCandidate(mensaje.candidato); } catch (e) {}
         return;
       }
 
@@ -491,9 +572,17 @@
 
       if (mensaje.tipo === 'respuesta') {
         await info.pc.setRemoteDescription(new RTCSessionDescription(mensaje.sdp));
-      } else if (mensaje.tipo === 'candidato') {
-        try { await info.pc.addIceCandidate(mensaje.candidato); } catch (e) {}
+        await this._vaciarCandidatosPendientes(idRemoto, info);
       }
+    }
+
+    async _vaciarCandidatosPendientes(idRemoto, info) {
+      const pendientes = this._candidatosPendientes.get(idRemoto) || [];
+      for (const candidato of pendientes) {
+        try { await info.pc.addIceCandidate(candidato); } catch (e) {}
+      }
+      this._candidatosPendientes.delete(idRemoto);
+      if (pendientes.length) this._log(`📨 Aplicados ${pendientes.length} candidato(s) ICE que habían llegado antes de tiempo`);
     }
 
     // ---------- SEÑALIZACIÓN AUTOMÁTICA VÍA TU WORKER ----------
