@@ -1012,7 +1012,6 @@ async function initLegalNotice() {
         localStorage.setItem('manolitoLegalAccepted', 'true');
         hideModal();
     });
-
     DOM.modalCloseBtn.addEventListener('click', hideModal);
     DOM.openLegalLink.addEventListener('click', (e) => {
         e.preventDefault();
