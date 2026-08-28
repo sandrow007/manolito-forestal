@@ -63,6 +63,8 @@ const map = L.map('map', {
     zoom: 6,
     zoomControl: true
 });
+// Hook público para los módulos de capas (FWI, recursos, PWA offline)
+window.manolitoMapa = map;
 
 // Capas base
 const baseDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -473,6 +475,15 @@ function recalcularCienciaFuego() {
         lineas.push(`▸ Si prendiera aquí: avanzaría hacia el <b>${s.escape.cardAvance}</b>. Huida: perpendicular (${s.escape.cardFlancoA} o ${s.escape.cardFlancoB}) o hacia lo ya quemado (${s.escape.cardBarlovento}). Nunca hacia el ${s.escape.cardAvance}.`);
     }
     div.innerHTML = lineas.join('<br>');
+
+    // Bandas de propagación t+2/6/12h (módulo opcional bandas-propagacion.js)
+    if (window.bandasPropagacion && s && typeof s.rosMMin === 'number') {
+        window.bandasPropagacion.actualizar(c.lat, c.lon, {
+            rosMMin: s.rosMMin,
+            windKmh: c.wind,
+            windDir: c.windDir
+        });
+    }
 }
 
 // 6a. OVERPASS CON RESPALDO (varios espejos + timeout)
@@ -633,6 +644,7 @@ async function obtenerDatosClimaticos(lat, lon) {
                 fillOpacity: 0.6
             }).addTo(map).bindPopup(`<b>${t('popupZonaAgua')}</b><br><small>Elevación: ${data.elevation}m</small>`);
             window.ultimoContextoManolito = null;
+            window.bandasPropagacion?.limpiar?.();
             return;
         }
 
@@ -1000,6 +1012,7 @@ async function initLegalNotice() {
         localStorage.setItem('manolitoLegalAccepted', 'true');
         hideModal();
     });
+
     DOM.modalCloseBtn.addEventListener('click', hideModal);
     DOM.openLegalLink.addEventListener('click', (e) => {
         e.preventDefault();
