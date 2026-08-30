@@ -56,7 +56,11 @@
         'evac.privacidad': 'GPS procesado solo en tu dispositivo. Nada sale del móvil.',
         'evac.datosGuardados': 'Datos de incendio guardados: {hora}',
         'evac.sinDatos': 'Sin datos de incendios. Muévase en dirección contraria al humo y llame al 112.',
-        'evac.cerrar': 'Cerrar navegación de evacuación'
+        'evac.cerrar': 'Cerrar navegación de evacuación',
+        'evac.sigueHacia': 'Sigue hacia el {card}',
+        'evac.calibraBrujula': 'Brújula errática: calibra moviendo el móvil en forma de 8',
+        'evac.gpsEdad': 'hace {s} s',
+        'evac.avisoLineaRecta': 'La flecha marca la dirección más corta, no una ruta segura garantizada: no esquiva el fuego ni el terreno. Prioriza siempre las indicaciones de Protección Civil y bomberos.'
     };
 
     function tt(clave, interp) {
@@ -195,7 +199,10 @@
         ultimaPos: null,          // {lat, lon, precision, ts}
         modoBrujulaPuro: false,   // failsafe: GPS degradado
         nivelAlerta: null,        // null | 'amarilla' | 'roja'
-        pausado: false            // pestaña oculta (evento manolito:pausa)
+        pausado: false,           // pestaña oculta (evento manolito:pausa)
+        anguloSuavizado: null,    // ángulo de pantalla tras el filtro anti-temblor
+        brujulaErratica: false,   // saltos bruscos repetidos de heading → pedir calibración
+        avisoFueraEmitido: false  // banner "fuera de peligro" mostrado una vez por evacuación
     };
 
     // Umbrales de proximidad al borde de un perímetro activo
@@ -203,6 +210,12 @@
     const UMBRAL_AMARILLO_M = 1200; // a menos de 1,2 km: aviso de preparación
     const GPS_MALO_M = 75;          // precisión peor que esto = GPS degradado
     const GPS_STALE_MS = 12000;     // sin fix en 12 s durante evacuación = degradado
+    // Ajustes de la guía de la flecha (skill forestal-escape-arrow):
+    const MAGNETIC_DECLINATION_DEG = -0.7; // declinación magnética Andalucía 2026
+    const REDIBUJO_MS = 500;          // la flecha se redibuja cada 500 ms con el último heading (barato)
+    const GPS_SONDEO_MS = 2000;       // el GPS se sondea cada ~2 s (caro); la UI interpola entre medias
+    const REPETIR_INSTRUCCION_MS = 10000; // cadencia de protocolo: repetir el rumbo cada 10 s bajo estrés
+    const FUERA_PELIGRO_M = 2000;     // distancia al perímetro para dar la zona por superada
 
     // Zonas de peligro: las vivas del mapa; si no hay (offline), las guardadas.
     function zonasActuales() {
@@ -294,8 +307,33 @@
         const giro = (screen.orientation && typeof screen.orientation.angle === 'number')
             ? screen.orientation.angle
             : (typeof window.orientation === 'number' ? window.orientation : 0);
-        estado.heading = (h + giro + 360) % 360;
+        h = (h + giro + 360) % 360;
+
+        // Detección de brújula errática (metal, líneas eléctricas, vehículos):
+        // saltos de más de 60° en menos de 300 ms, tres veces seguidas.
+        const ahora = Date.now();
+        if (ultimoHeading !== null && ahora - ultimoHeadingTs < 300) {
+            let salto = Math.abs(h - ultimoHeading);
+            if (salto > 180) salto = 360 - salto;
+            if (salto > 60) {
+                saltosBrujula++;
+                if (saltosBrujula >= 3 && !estado.brujulaErratica) {
+                    estado.brujulaErratica = true;
+                    pintarEstadoNav();
+                }
+            } else if (saltosBrujula > 0) {
+                saltosBrujula--;
+                if (saltosBrujula === 0 && estado.brujulaErratica) {
+                    estado.brujulaErratica = false;
+                    pintarEstadoNav();
+                }
+            }
+        }
+        ultimoHeading = h;
+        ultimoHeadingTs = ahora;
+        estado.heading = h;
     }
+    let ultimoHeading = null, ultimoHeadingTs = 0, saltosBrujula = 0;
 
     async function activarBrujula() {
         if (typeof DeviceOrientationEvent !== 'undefined' &&
@@ -362,6 +400,12 @@
                 if (diff > 25) flashRecalculando();
             }
             pintarDistancia(vec);
+            // Zona superada: fuera del perímetro y a más de FUERA_PELIGRO_M.
+            // Se avisa una vez por evacuación; la navegación sigue activa.
+            if (!vec.dentro && vec.distZonaM > FUERA_PELIGRO_M && !estado.avisoFueraEmitido) {
+                estado.avisoFueraEmitido = true;
+                pintarBanner(tt('evac.fueraDeZona'), 'amarilla');
+            }
         } else {
             pintarBanner(tt('evac.sinDatos'), 'roja');
         }
@@ -422,20 +466,28 @@
         detenerMonitoreo();
         estado.evacuando = true;
         estado.modoBrujulaPuro = false;
+        estado.anguloSuavizado = null;
+        estado.avisoFueraEmitido = false;
         mostrarNav();
         pintarBanner(tt('evac.buscandoGps'), 'amarilla');
         watchEvacuacion = navigator.geolocation.watchPosition(alPosicionEvacuacion, alErrorGps, {
-            enableHighAccuracy: true, maximumAge: 1000, timeout: 10000
+            enableHighAccuracy: true, maximumAge: GPS_SONDEO_MS, timeout: 10000
         });
-        bucleFlecha();
+        timerFlecha = setInterval(bucleFlecha, REDIBUJO_MS);
+        timerVoz = setInterval(repetirInstruccion, REPETIR_INSTRUCCION_MS);
         actualizarBoton();
     }
 
     function detenerEvacuacion() {
         if (watchEvacuacion !== null) navigator.geolocation.clearWatch(watchEvacuacion);
         watchEvacuacion = null;
+        if (timerFlecha !== null) clearInterval(timerFlecha);
+        if (timerVoz !== null) clearInterval(timerVoz);
+        timerFlecha = timerVoz = null;
+        try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) { }
         estado.evacuando = false;
         estado.modoBrujulaPuro = false;
+        estado.anguloSuavizado = null;
         desactivarBrujula();
         ocultarNav();
         ocultarBanner();
@@ -502,6 +554,7 @@
 #evac-rumbo{font-size:17px;margin-top:2px}
 #evac-estado{font-size:14px;margin-top:6px;color:#ffd54f;min-height:18px}
 #evac-nota{font-size:12px;margin-top:6px;color:#b0bec5}
+#evac-aviso{font-size:11px;margin-top:6px;color:#ef9a9a;line-height:1.3}
 #evac-cerrar{min-width:48px;min-height:48px;margin-top:10px;font-size:16px;font-weight:700;
  border-radius:10px;border:2px solid #fff;background:#b71c1c;color:#fff;cursor:pointer;width:100%}
 .evac-escapar-btn{min-width:48px;min-height:48px;margin-top:6px;font-weight:700;border-radius:8px;
@@ -521,7 +574,7 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
     }
 
     // ================= UI: DOM =================
-    let elBoton, elBanner, elNav, elFlecha, elDist, elRumbo, elEstado, elNota;
+    let elBoton, elBanner, elNav, elFlecha, elDist, elRumbo, elEstado, elNota, elAviso;
 
     function construirUI() {
         inyectarEstilos();
@@ -553,6 +606,7 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
  <div id="evac-dist" aria-live="polite"></div>
  <div id="evac-rumbo"></div>
  <div id="evac-estado" aria-live="polite"></div>
+ <div id="evac-aviso"></div>
  <div id="evac-nota"></div>
  <button id="evac-cerrar" type="button"></button>
 </div>`;
@@ -563,6 +617,7 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
         elRumbo = document.getElementById('evac-rumbo');
         elEstado = document.getElementById('evac-estado');
         elNota = document.getElementById('evac-nota');
+        elAviso = document.getElementById('evac-aviso');
         const btnCerrar = document.getElementById('evac-cerrar');
         btnCerrar.addEventListener('click', detenerEvacuacion);
 
@@ -584,6 +639,8 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
                 ? tt('evac.offline', { hora })
                 : tt('evac.privacidad');
         }
+        if (elAviso) elAviso.textContent = tt('evac.avisoLineaRecta');
+        ultimoTextoEstado = ''; // fuerza repintar la línea de estado en el nuevo idioma
         if (estado.evacuando) pintarEstadoNav();
     }
 
@@ -634,12 +691,22 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
         });
     }
 
+    let ultimoTextoEstado = '';
     function pintarEstadoNav() {
         if (!elEstado) return;
+        let texto = '';
         if (estado.modoBrujulaPuro) {
-            elEstado.textContent = tt('evac.modoBrujula');
+            texto = tt('evac.modoBrujula');
         } else if (estado.ultimaPos) {
-            elEstado.textContent = `GPS ±${Math.round(estado.ultimaPos.precision)} m`;
+            const edad = Math.round((Date.now() - estado.ultimaPos.ts) / 1000);
+            texto = `GPS ±${Math.round(estado.ultimaPos.precision)} m` +
+                (edad > 5 ? ` · ${tt('evac.gpsEdad', { s: edad })}` : '');
+        }
+        if (estado.brujulaErratica) texto += (texto ? ' · ' : '') + tt('evac.calibraBrujula');
+        // Solo tocar el DOM (y el aria-live) cuando el texto cambia de verdad
+        if (texto && texto !== ultimoTextoEstado) {
+            ultimoTextoEstado = texto;
+            elEstado.textContent = texto;
         }
         actualizarTextosNota();
     }
@@ -662,22 +729,67 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
     }
 
     // ================= Flecha flotante =================
-    // Gira con la diferencia entre el rumbo de escape y la orientación del
-    // dispositivo: la punta señala SIEMPRE la dirección física de huida.
+    // Gira con la diferencia entre el rumbo de escape (bearing, norte
+    // verdadero) y la orientación del dispositivo (heading, norte MAGNÉTICO):
+    // la punta señala SIEMPRE la dirección física de huida. Por eso al restar
+    // se aplica la declinación magnética: convierte el bearing al mismo
+    // marco de referencia que usa la brújula. Si la referencia es el rumbo
+    // GPS (course), ese ya viene en norte verdadero y no lleva corrección.
+    //
+    // Batería: el GPS se sondea cada ~2 s (caro) y la flecha se redibuja
+    // cada 500 ms reutilizando el último heading (barato). El filtro de
+    // suavizado respeta el salto 360°/0° para que la aguja no tiemble.
+
+    function suavizarAngulo(previo, nuevo, factor = 0.3) {
+        if (previo === null) return nuevo;
+        const diff = ((nuevo - previo + 540) % 360) - 180; // diferencia angular más corta
+        return (previo + diff * factor + 360) % 360;
+    }
+
+    let timerFlecha = null;
+    let timerVoz = null;
+
     function bucleFlecha() {
         if (!estado.evacuando) return;
         if (estado.azEscape !== null && elFlecha) {
-            let referencia = estado.heading;
-            if (referencia === null) referencia = estado.gpsCourse;
-            if (referencia === null) referencia = 0; // sin sensores: flecha fija al norte del rumbo
-            elFlecha.style.transform = `rotate(${estado.azEscape - referencia}deg)`;
+            let objetivo;
+            if (estado.heading !== null) {
+                objetivo = (estado.azEscape + MAGNETIC_DECLINATION_DEG - estado.heading + 360) % 360;
+            } else if (estado.gpsCourse !== null) {
+                objetivo = (estado.azEscape - estado.gpsCourse + 360) % 360;
+            } else {
+                objetivo = estado.azEscape; // sin sensores: flecha fija respecto al norte
+            }
+            estado.anguloSuavizado = suavizarAngulo(estado.anguloSuavizado, objetivo);
+            elFlecha.style.transform = `rotate(${estado.anguloSuavizado}deg)`;
         }
         // GPS stale: sin fix reciente en plena evacuación = brújula pura
         if (estado.ultimaPos && (Date.now() - estado.ultimaPos.ts > GPS_STALE_MS) && !estado.modoBrujulaPuro) {
             estado.modoBrujulaPuro = true;
-            pintarEstadoNav();
         }
-        requestAnimationFrame(bucleFlecha);
+        // Edad del fix visible (batería baja / ahorro de energía ralentiza el GPS)
+        pintarEstadoNav();
+    }
+
+    // Repetición de protocolo: cada 10 s se repite el rumbo de escape en
+    // voz alta y se refuerza en texto. Bajo estrés la instrucción hablada
+    // no depende de mirar la pantalla. Si la voz no está disponible, la
+    // indicación visual sigue funcionando igual.
+    function repetirInstruccion() {
+        if (!estado.evacuando || estado.azEscape === null) return;
+        const card = gradosACardinalLocal(estado.azEscape);
+        const texto = tt('evac.sigueHacia', { card });
+        if (elEstado) elEstado.dataset.ultimaVoz = texto;
+        try {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(texto);
+                u.lang = document.documentElement.lang || 'es';
+                u.rate = 1.05;
+                u.volume = 1;
+                window.speechSynthesis.speak(u);
+            }
+        } catch (e) { /* voz no disponible: la flecha y el texto siguen */ }
     }
 
     // ================= Activación manual desde un foco =================
