@@ -368,6 +368,9 @@
       this._meshVistos = new Map(); // ids de mensajes de emergencia ya procesados
       this._candidatosPendientes = new Map(); // id remoto -> candidatos ICE que llegaron antes que la oferta/respuesta
       this._montarUI();
+      // Ahorro de batería: pwa-offline.js emite estos eventos al ocultar/mostrar la pestaña
+      window.addEventListener('manolito:pausa', () => { clearInterval(this._timerSondeo); this._timerSondeo = null; });
+      window.addEventListener('manolito:reanudar', () => { if (this.activo && !this._timerSondeo) this._iniciarSondeoSenales(); });
     }
 
     // ---------- UI ----------
