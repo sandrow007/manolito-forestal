@@ -51,7 +51,7 @@
         'evac.recalculando': 'Recalculando vector de escape…',
         'evac.offline': 'Sin conexión: navegando con los últimos datos guardados ({hora})',
         'evac.permisoBrujula': 'Toca para activar la brújula',
-        'evac.popupEscapar': '🧭 Escapar de este foco',
+        'evac.popupEscapar': 'Escapar de este foco',
         'evac.fueraDeZona': 'Fuera de la zona de peligro inmediato. Siga alejándose.',
         'evac.privacidad': 'GPS procesado solo en tu dispositivo. Nada sale del móvil.',
         'evac.datosGuardados': 'Datos de incendio guardados: {hora}',
@@ -648,7 +648,9 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
         if (!elBoton) return;
         const activo = estado.evacuando || estado.monitorizando;
         elBoton.setAttribute('aria-pressed', activo ? 'true' : 'false');
-        elBoton.textContent = estado.evacuando ? `🧭 ${tt('evac.detener')}` : `🧭 ${tt('evac.boton')}`;
+        const etiqueta = estado.evacuando ? tt('evac.detener') : tt('evac.boton');
+        elBoton.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/></svg><span></span>';
+        elBoton.querySelector('span').textContent = etiqueta;
     }
 
     function pintarBanner(texto, nivel, conBoton) {
