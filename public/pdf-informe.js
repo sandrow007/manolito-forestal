@@ -1,19 +1,19 @@
 /**
  * MANOLIT∞ FORESTAL - Generador de informe PDF
- * jsPDF se auto-hospeda en vendor/ y se carga PEREZOSAMENTE: solo se
+ * jsPDF se carga PEREZOSAMENTE desde el CDN oficial (cdnjs): solo se
  * descargan sus ~360 KB si el usuario pulsa "Descargar informe PDF".
- * Antes se cargaba por CDN en cada visita, uses el PDF o no.
+ * Antes se cargaba en cada visita, uses el PDF o no.
  */
 
-// Carga perezosa de jsPDF (local, vendor/jspdf.umd.min.js). Se cachea la
-// promesa para que el segundo clic no descargue nada.
+// Carga perezosa de jsPDF (CDN oficial). Se cachea la promesa para que
+// el segundo clic no descargue nada.
 let promesaJsPdf = null;
 function cargarJsPdf() {
     if (window.jspdf) return Promise.resolve();
     if (promesaJsPdf) return promesaJsPdf;
     promesaJsPdf = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'vendor/jspdf.umd.min.js';
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
         s.onload = () => resolve();
         s.onerror = () => { promesaJsPdf = null; reject(new Error('jspdf no cargó')); };
         document.head.appendChild(s);
