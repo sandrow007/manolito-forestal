@@ -128,6 +128,141 @@ L.control.layers(capasBase, capasOverlay, {
     collapsed: true   // todo se abre/cierra a voluntad; nada desplegado por defecto
 }).addTo(map);
 
+// 1c. CONTROL "MI UBICACIÓN" — punto azul estilo Google Maps.
+// Un toque: pide permiso, centra el mapa en ti y te dibuja (punto azul con
+// halo pulsante + círculo de precisión). Sigue tu posición mientras esté
+// activo. Otro toque: lo apaga y limpia. Si falla, un aviso dice el motivo
+// EXACTO (permiso denegado / sin señal / timeout), nada de silencios.
+(function instalarControlUbicacion() {
+    // Estilos del punto azul (halo pulsante + núcleo), autocontenidos
+    const cssUbicacion = document.createElement('style');
+    cssUbicacion.textContent =
+        '.mf-ubicacion-dot{position:relative;width:22px;height:22px;}' +
+        '.mf-ubicacion-nucleo{position:absolute;inset:3px;border-radius:50%;' +
+        'background:#1a73e8;border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);}' +
+        '.mf-ubicacion-pulso{position:absolute;inset:-9px;border-radius:50%;' +
+        'background:rgba(26,115,232,.28);animation:mf-pulso-ubicacion 2s ease-out infinite;}' +
+        '@keyframes mf-pulso-ubicacion{0%{transform:scale(.5);opacity:.9;}' +
+        '70%{transform:scale(1.6);opacity:0;}100%{transform:scale(1.6);opacity:0;}}' +
+        '.mf-toast-ubicacion{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);' +
+        'z-index:2000;max-width:min(420px,86vw);padding:12px 16px;border-radius:10px;' +
+        'background:rgba(7,10,16,.94);color:#fff;font:600 13px/1.4 system-ui,sans-serif;' +
+        'box-shadow:0 4px 14px rgba(0,0,0,.5);display:none;}' +
+        '.leaflet-control-miubicacion a{display:flex!important;align-items:center;' +
+        'justify-content:center;}' +
+        '.leaflet-control-miubicacion.mf-ubicacion-activa a{background:#1a73e8!important;}' +
+        '.leaflet-control-miubicacion.mf-ubicacion-activa svg{stroke:#fff!important;}';
+    document.head.appendChild(cssUbicacion);
+
+    let watchId = null;
+    let capaUbicacion = null;
+    let toastTimer = null;
+
+    function toastUbicacion(texto) {
+        let el = document.querySelector('.mf-toast-ubicacion');
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'mf-toast-ubicacion';
+            el.setAttribute('role', 'alert');
+            document.body.appendChild(el);
+        }
+        el.textContent = texto;
+        el.style.display = 'block';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { el.style.display = 'none'; }, 7000);
+    }
+
+    function pintarUbicacion(lat, lon, precision) {
+        if (!capaUbicacion) {
+            capaUbicacion = L.layerGroup().addTo(map);
+        }
+        capaUbicacion.clearLayers();
+        // Círculo de precisión (hasta 2 km de radio pintado, para no tapar media provincia)
+        if (isFinite(precision) && precision > 0) {
+            L.circle([lat, lon], {
+                radius: Math.min(precision, 2000),
+                color: '#1a73e8', weight: 1, opacity: 0.5,
+                fillColor: '#1a73e8', fillOpacity: 0.12
+            }).addTo(capaUbicacion);
+        }
+        // Punto azul con halo pulsante (como Google Maps)
+        L.marker([lat, lon], {
+            icon: L.divIcon({
+                className: '',
+                html: '<div class="mf-ubicacion-dot"><div class="mf-ubicacion-pulso"></div><div class="mf-ubicacion-nucleo"></div></div>',
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
+            }),
+            interactive: false,
+            keyboard: false,
+            zIndexOffset: 1000
+        }).addTo(capaUbicacion);
+    }
+
+    function apagarUbicacion(controlEl) {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (capaUbicacion) { capaUbicacion.clearLayers(); map.removeLayer(capaUbicacion); capaUbicacion = null; }
+        controlEl.classList.remove('mf-ubicacion-activa');
+    }
+
+    function alErrorUbicacion(err, controlEl) {
+        let clave = 'evac.sinGps', fb = 'GPS no disponible. Active la ubicación del dispositivo.';
+        if (err && err.code === 1) { clave = 'evac.errorPermiso'; fb = 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador.'; }
+        else if (err && err.code === 2) { clave = 'evac.errorSinSenal'; fb = 'Sin señal de ubicación. Sal a cielo abierto o activa la ubicación del sistema.'; }
+        else if (err && err.code === 3) { clave = 'evac.errorTimeout'; fb = 'El GPS tarda demasiado en responder. Inténtalo de nuevo a cielo abierto.'; }
+        toastUbicacion((typeof t === 'function' && t(clave) !== clave) ? t(clave) : fb);
+        apagarUbicacion(controlEl);
+    }
+
+    const controlUbicacion = L.control({ position: 'topleft' });
+    controlUbicacion.onAdd = function () {
+        const caja = L.DomUtil.create('div', 'leaflet-bar leaflet-control-miubicacion');
+        const btn = L.DomUtil.create('a', '', caja);
+        btn.href = '#';
+        btn.setAttribute('role', 'button');
+        const ponerAria = () => {
+            const activa = caja.classList.contains('mf-ubicacion-activa');
+            const clave = activa ? 'gps.dejarSeguir' : 'gps.miUbicacion';
+            const fb = activa ? 'Dejar de seguir mi ubicación' : 'Mi ubicación';
+            btn.setAttribute('aria-label', (typeof t === 'function' && t(clave) !== clave) ? t(clave) : fb);
+            btn.title = btn.getAttribute('aria-label');
+        };
+        // Icono de diana (círculo con cruz), estilo "localizar"
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+            '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.6" fill="#333" stroke="none"/>' +
+            '<path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+        L.DomEvent.disableClickPropagation(caja);
+        L.DomEvent.on(btn, 'click', function (e) {
+            L.DomEvent.preventDefault(e);
+            if (watchId !== null) { apagarUbicacion(caja); ponerAria(); return; }
+            if (!('geolocation' in navigator)) {
+                toastUbicacion('GPS no disponible en este dispositivo.');
+                return;
+            }
+            caja.classList.add('mf-ubicacion-activa');
+            ponerAria();
+            let primerFix = true;
+            watchId = navigator.geolocation.watchPosition(function (pos) {
+                const c = pos.coords;
+                pintarUbicacion(c.latitude, c.longitude, c.accuracy);
+                if (primerFix) {
+                    primerFix = false;
+                    map.setView([c.latitude, c.longitude], Math.max(map.getZoom(), 15));
+                }
+            }, function (err) { alErrorUbicacion(err, caja); ponerAria(); }, {
+                enableHighAccuracy: true, maximumAge: 5000, timeout: 15000
+            });
+        });
+        ponerAria();
+        // i18n en caliente
+        document.addEventListener('manolito:idioma-cambiado', ponerAria);
+        window.addEventListener('manolitoforestal:idioma-cambiado', ponerAria);
+        return caja;
+    };
+    controlUbicacion.addTo(map);
+})();
+
 let marcadorActivo = null;      // marcador de evaluación cuántica
 let flechaViento = null;        // flecha de dirección de viento
 let conoPropagacion = null;     // polígono/cono de propagación estimada
@@ -752,12 +887,49 @@ function envolventeConvexa(puntos) {
     return inferior.concat(superior).map(p => p.orig);
 }
 
-// Ensancha ligeramente el contorno hacia fuera desde su centro, para que no
-// pase justo pegado a los puntos y se vea como un perímetro real de incendio
-function expandirDesdeCentroide(puntos, factor = 1.3) {
+// Ensancha el contorno hacia fuera desde su centroide un margen EN METROS
+// (no un factor): el margen es real en el terreno. Devuelve [lat, lon].
+function expandirDesdeCentroide(puntos, margenM = 350) {
     const lat0 = puntos.reduce((s, p) => s + p.lat, 0) / puntos.length;
     const lon0 = puntos.reduce((s, p) => s + p.lon, 0) / puntos.length;
-    return puntos.map(p => [lat0 + (p.lat - lat0) * factor, lon0 + (p.lon - lon0) * factor]);
+    const R = 6371000, toRad = d => d * Math.PI / 180, toDeg = r => r * 180 / Math.PI;
+    const mPorDegLat = toRad(1) * R;
+    const mPorDegLon = mPorDegLat * Math.cos(toRad(lat0));
+    return puntos.map(p => {
+        const dy = (p.lat - lat0) * mPorDegLat;
+        const dx = (p.lon - lon0) * mPorDegLon;
+        const d = Math.hypot(dx, dy);
+        const f = d > 0 ? (d + margenM) / d : 1;
+        return [lat0 + (dy * f) / mPorDegLat, lon0 + (dx * f) / mPorDegLon];
+    });
+}
+
+// Suavizado de Chaikin para polígonos cerrados: convierte el contorno de
+// vértices duros (aspecto "minecraft") en una forma curva y orgánica, como
+// una cicatriz de fuego real. Dos iteraciones bastan.
+function suavizarChaikin(coords, iteraciones = 2) {
+    let pts = coords;
+    for (let it = 0; it < iteraciones; it++) {
+        const salida = [];
+        for (let i = 0; i < pts.length; i++) {
+            const a = pts[i], b = pts[(i + 1) % pts.length];
+            salida.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
+            salida.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+        }
+        pts = salida;
+    }
+    return pts;
+}
+
+// Radio del grupo en metros: distancia del centroide al punto más alejado.
+function radioGrupoMetros(puntos) {
+    const lat0 = puntos.reduce((s, p) => s + p.lat, 0) / puntos.length;
+    const lon0 = puntos.reduce((s, p) => s + p.lon, 0) / puntos.length;
+    let max = 0;
+    for (const p of puntos) {
+        max = Math.max(max, distanciaHaversineMetros(lat0, lon0, p.lat, p.lon));
+    }
+    return max;
 }
 
 function areaPoligonoHa(coordsLatLon) {
@@ -824,13 +996,13 @@ function dibujarPerimetrosActivos(puntos) {
     if (!puntos.length) return;
 
     // Perímetro en tiempo real con el mismo lenguaje visual que las
-    // áreas quemadas EFFIS: relleno oscuro ceniza + contorno rojo.
+    // áreas quemadas EFFIS: relleno oscuro ceniza + contorno rojo continuo
+    // (nada de líneas a tramos ni esquinas rectas: formas orgánicas).
     const estiloPerimetro = {
         color: '#ff2b1a',
         weight: 2.4,
         fillColor: '#3a3a3a',
-        fillOpacity: 0.5,
-        dashArray: '6 5'
+        fillOpacity: 0.5
     };
 
     const grupos = agruparPuntosFuego(puntos, 4000);
@@ -856,14 +1028,18 @@ function dibujarPerimetrosActivos(puntos) {
                 areaHa: Math.PI * radio * radio / 10000
             });
         } else {
+            // Contorno orgánico: envolvente convexa + margen en metros +
+            // suavizado Chaikin. El resultado es una mancha curva que rodea
+            // los focos, no un cuadrado: como una cicatriz de fuego real.
             const hull = envolventeConvexa(grupo);
-            const hullExpandido = expandirDesdeCentroide(hull, 1.3);
-            L.polygon(hullExpandido, estiloPerimetro)
+            const margenM = Math.max(350, radioGrupoMetros(grupo) * 0.15);
+            const contorno = suavizarChaikin(expandirDesdeCentroide(hull, margenM), 2);
+            L.polygon(contorno, estiloPerimetro)
                 .addTo(grupoPerimetroFuegos)
                 .bindTooltip('Perímetro estimado a partir de detecciones activas (crece con nuevas detecciones)');
             window.perimetrosActivosGeom.push({
-                tipo: 'poligono', coords: hullExpandido,
-                areaHa: areaPoligonoHa(hullExpandido)
+                tipo: 'poligono', coords: contorno,
+                areaHa: areaPoligonoHa(contorno)
             });
         }
     });
