@@ -37,7 +37,9 @@
 
     var swRegistro = null;
     var badge = null;
+    var badgeDescartado = false; // true si el usuario cerró el badge (hasta el próximo cambio de red)
     var boton = null;
+    var miniFab = null;
     var zonaProgreso = null;
     var zonaTexto = null;
     var barraProgreso = null;
@@ -56,7 +58,9 @@
             'pwa.preparando': 'Descargando mapa de la zona… {hechas}/{total}',
             'pwa.zonaLista': 'Zona lista para uso offline ({tiles} tiles)',
             'pwa.zonaError': 'No se pudo preparar la zona. Reintenta con conexión.',
-            'pwa.sinMapa': 'Mapa no disponible todavía'
+            'pwa.sinMapa': 'Mapa no disponible todavía',
+            'pwa.cerrarAviso': 'Cerrar aviso de conexión',
+            'pwa.expandir': 'Mostrar el botón de preparar zona'
         };
         return fb[clave] || clave;
     }
@@ -130,6 +134,12 @@
 
     function actualizarBadge() {
         if (!badge) return;
+        // Si el usuario lo cerró, no se vuelve a mostrar hasta que cambie la red.
+        if (badgeDescartado) {
+            badge.style.display = 'none';
+            return;
+        }
+        badge.style.display = '';
         // Sin emojis: el color de fondo ya comunica el estado (cian = en
         // línea, naranja = sin conexión) y un punto CSS refuerza el texto.
         const punto = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:7px;vertical-align:1px"></span>';
@@ -145,10 +155,27 @@
             badge.style.background = '#ff9f43';
             badge.style.opacity = '1';
         }
+        // Botón ✕ para cerrar el aviso (el badge tiene pointer-events:none,
+        // así que el ✕ los reactiva solo para sí mismo).
+        var btnX = document.createElement('button');
+        btnX.type = 'button';
+        btnX.textContent = '✕';
+        btnX.setAttribute('aria-label', tt('pwa.cerrarAviso'));
+        btnX.style.cssText =
+            'pointer-events:auto;margin-left:10px;width:32px;height:32px;border:0;' +
+            'border-radius:50%;background:rgba(7,10,16,.18);color:inherit;' +
+            'font:700 14px/1 system-ui,sans-serif;cursor:pointer;vertical-align:middle;';
+        btnX.addEventListener('click', function () {
+            badgeDescartado = true;
+            actualizarBadge();
+        });
+        badge.appendChild(btnX);
     }
 
     function alCambiarConexion() {
         enLinea = navigator.onLine;
+        // Un cambio real de red vuelve a mostrar el badge aunque se hubiera cerrado.
+        badgeDescartado = false;
         actualizarBadge();
     }
 
@@ -162,6 +189,20 @@
         return null;
     }
 
+    var LS_BOTON_OCULTO = 'manolitoPwaBotonOculto';
+
+    function botonOcultoGuardado() {
+        try { return localStorage.getItem(LS_BOTON_OCULTO) === '1'; } catch (e) { return false; }
+    }
+
+    // Colapsa el botón grande a un mini-FAB redondo (y viceversa), con persistencia.
+    function ponerBotonColapsado(colapsado) {
+        if (!boton || !miniFab) return;
+        boton.style.display = colapsado ? 'none' : '';
+        miniFab.style.display = colapsado ? '' : 'none';
+        try { localStorage.setItem(LS_BOTON_OCULTO, colapsado ? '1' : '0'); } catch (e) { /* sin storage */ }
+    }
+
     function crearBoton() {
         boton = document.createElement('button');
         boton.id = 'pwa-btn-preparar-zona';
@@ -170,12 +211,43 @@
         // ni con el dashboard (panel lateral superior).
         boton.style.cssText =
             'position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);' +
-            'z-index:1800;min-height:48px;min-width:48px;padding:12px 18px;border:0;' +
+            'z-index:1800;min-height:48px;min-width:48px;padding:12px 40px 12px 18px;border:0;' +
             'border-radius:12px;background:#00f3ff;color:#070a10;cursor:pointer;' +
             'font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.6);';
         boton.setAttribute('aria-label', tt('pwa.prepararZona'));
         boton.textContent = tt('pwa.prepararZona');
         boton.addEventListener('click', prepararZona);
+
+        // ✕ en la esquina del botón: lo colapsa a un mini-FAB para dejar el mapa limpio.
+        var btnColapsar = document.createElement('span');
+        btnColapsar.textContent = '✕';
+        btnColapsar.setAttribute('role', 'button');
+        btnColapsar.setAttribute('aria-label', tt('pwa.cerrarAviso'));
+        btnColapsar.style.cssText =
+            'position:absolute;top:2px;right:6px;width:28px;height:28px;display:flex;' +
+            'align-items:center;justify-content:center;font:700 13px/1 system-ui,sans-serif;' +
+            'color:rgba(7,10,16,.65);cursor:pointer;';
+        btnColapsar.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            ponerBotonColapsado(true);
+        });
+        boton.appendChild(btnColapsar);
+
+        // Mini-FAB: mismo sitio, redondo, semitransparente; un toque restaura el botón.
+        miniFab = document.createElement('button');
+        miniFab.id = 'pwa-btn-preparar-mini';
+        miniFab.type = 'button';
+        miniFab.style.cssText =
+            'position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);' +
+            'z-index:1800;width:48px;height:48px;border:0;border-radius:50%;display:none;' +
+            'align-items:center;justify-content:center;background:rgba(0,243,255,.35);' +
+            'color:#070a10;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);';
+        miniFab.setAttribute('aria-label', tt('pwa.expandir'));
+        miniFab.innerHTML =
+            '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+            'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M5 21h14"/></svg>';
+        miniFab.addEventListener('click', function () { ponerBotonColapsado(false); });
 
         zonaProgreso = document.createElement('div');
         zonaProgreso.id = 'pwa-progreso-zona';
@@ -196,7 +268,10 @@
         zonaTexto = document.createElement('div');
         zonaProgreso.insertBefore(zonaTexto, barraWrap);
         document.body.appendChild(boton);
+        document.body.appendChild(miniFab);
         document.body.appendChild(zonaProgreso);
+        // Respeta la preferencia guardada de la última visita.
+        if (botonOcultoGuardado()) ponerBotonColapsado(true);
     }
 
     function mostrarProgreso(texto, pct) {
