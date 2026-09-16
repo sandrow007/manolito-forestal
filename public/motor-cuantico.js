@@ -796,7 +796,7 @@ function puntoDentroPoligono(lat, lon, coordsLatLon) {
 // distancia está del más cercano (lo usa el informe y la recomendación).
 window.perimetrosActivosGeom = [];
 
-// Dado un punto, dice si un punto está DENTRO de un perímetro activo estimado, o a
+// Dado un punto, dice si está DENTRO de un perímetro activo estimado, o a
 // qué distancia (km) está del más cercano, y el área aproximada (ha) de ese foco.
 function evaluarPerimetroParaPunto(lat, lon) {
     if (!window.perimetrosActivosGeom || !window.perimetrosActivosGeom.length) return null;
