@@ -24,7 +24,7 @@
 
     var TIPOS = {
         hidrante: {
-            emoji: '🚰',
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 C13.8 6.5 17.5 9 17.5 13.5 a5.5 5.5 0 0 1-11 0 C6.5 9 10.2 6.5 12 2.5 Z" fill="#fff"/></svg>',
             i18n: 'recursos.tipoHidrante',
             overpass: [
                 'node["emergency"="fire_hydrant"]({{bbox}});',
@@ -32,7 +32,7 @@
             ]
         },
         deposito: {
-            emoji: '🛢️',
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="3" fill="none" stroke="#fff" stroke-width="2"/><path d="M5 13 h14" stroke="#fff" stroke-width="2"/></svg>',
             i18n: 'recursos.tipoDeposito',
             overpass: [
                 'node["emergency"="water_tank"]({{bbox}});',
@@ -40,7 +40,7 @@
             ]
         },
         helisuperficie: {
-            emoji: '🚁',
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4 v16 M17 4 v16 M7 12 h10" stroke="#fff" stroke-width="3" fill="none"/></svg>',
             i18n: 'recursos.tipoHelisuperficie',
             overpass: [
                 'node["aeroway"="helipad"]({{bbox}});',
@@ -48,7 +48,7 @@
             ]
         },
         balsa: {
-            emoji: '💧',
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14 c2-2 4-2 6 0 s4 2 6 0 4-2 4 0 v4 H4 Z" fill="#fff"/></svg>',
             i18n: 'recursos.tipoBalsa',
             overpass: [
                 'node["natural"="water"]["water"~"^(reservoir|basin)$"]({{bbox}});',
@@ -57,7 +57,7 @@
             ]
         },
         bomberos: {
-            emoji: '🚒',
+            svg: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 C13.2 6.5 17 8.5 17 13.6 a5 5 0 0 1-10 0 C7 10.5 8 9.5 8.8 7.6 9.6 9.5 10.6 10.2 11 10.2 c0-3.4 .6-6.6 1-8.2 Z" fill="#fff"/></svg>',
             i18n: 'recursos.tipoBomberos',
             overpass: [
                 'node["emergency"="fire_station"]({{bbox}});',
@@ -272,7 +272,7 @@
         return L.divIcon({
             className: 'mf-recurso-icono mf-recurso-' + tipo,
             html: '<span role="img" aria-label="' + tr(TIPOS[tipo].i18n) + '">' +
-                  TIPOS[tipo].emoji + '</span>',
+                  TIPOS[tipo].svg + '</span>',
             iconSize: [30, 30],
             iconAnchor: [15, 15],
             popupAnchor: [0, -14]
@@ -398,7 +398,7 @@
         toggle.setAttribute('aria-pressed', 'false');
         toggle.setAttribute('aria-label', tr('recursos.toggleAria'));
         toggle.setAttribute('aria-controls', 'mf-recursos-panel');
-        toggle.innerHTML = '<span aria-hidden="true">🚒</span>';
+        toggle.innerHTML = '<span aria-hidden="true">' + '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 C13.2 6.5 17 8.5 17 13.6 a5 5 0 0 1-10 0 C7 10.5 8 9.5 8.8 7.6 9.6 9.5 10.6 10.2 11 10.2 c0-3.4 .6-6.6 1-8.2 Z" fill="#fff"/></svg>' + '</span>';
 
         var panel = document.createElement('section');
         panel.id = 'mf-recursos-panel';
@@ -423,7 +423,7 @@
             });
             label.appendChild(cb);
             var span = document.createElement('span');
-            span.textContent = TIPOS[k].emoji + ' ' + tr(TIPOS[k].i18n);
+            span.innerHTML = TIPOS[k].svg + ' '; span.appendChild(document.createTextNode(tr(TIPOS[k].i18n)));
             label.appendChild(span);
             fieldset.appendChild(label);
         });
