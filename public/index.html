@@ -8,10 +8,44 @@
 <title>Manolit∞ Forestal · Incendios en tiempo real y riesgo de propagación</title>
 <meta name="description" content="Manolit∞ Forestal: mapa en tiempo real de incendios activos (NASA FIRMS), áreas quemadas (EFFIS/Copernicus), perímetro estimado de propagación y motor de comportamiento del fuego (Fosberg, Rothermel, Byram). Código abierto, gratis y sin registro.">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Leaflet auto-hospedado: cero CDNs, cero peticiones a terceros.
+     Menos KB por visita y mejor caché (objetivo: huella de carbono A+). -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+
+<!-- Fuentes auto-hospedadas en woff2 (subconjunto latin, solo los pesos
+     usados). Antes: Google Fonts descargaba 3 familias completas desde
+     servidores de Google en cada visita nueva. Ahora: 4 archivos locales
+     (~100 KB) cacheados agresivamente por el Service Worker. -->
+<style>
+    @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 100 900; /* variable: cubre 400/500/600 con 1 archivo */
+        font-display: swap;
+        src: url('vendor/fonts/inter-400.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'JetBrains Mono';
+        font-style: normal;
+        font-weight: 400 700; /* variable */
+        font-display: swap;
+        src: url('vendor/fonts/jetbrainsmono-400.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'Rajdhani';
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url('vendor/fonts/rajdhani-600.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'Rajdhani';
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        src: url('vendor/fonts/rajdhani-700.woff2') format('woff2');
+    }
+</style>
 
 <style>
     :root {
@@ -330,8 +364,9 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="vendor/leaflet/leaflet.js" defer></script>
+<!-- jsPDF (~360 KB) ya NO se carga en cada visita: pdf-informe.js lo
+     descarga localmente solo cuando el usuario pulsa "Descargar informe". -->
 <script src="idiomas.js" defer></script>
 <script src="baliza-ultrasonica.js"></script>
 <script src="modo-emergencias.js"></script>
