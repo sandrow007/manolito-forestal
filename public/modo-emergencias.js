@@ -58,10 +58,10 @@
 
   const MESH_NOMBRES = {
     1: 'SOS',
-    2: '🔥 Fuego',
-    3: '⚠️ Persona atrapada',
-    4: '💧 Necesita ayuda',
-    5: '✅ A salvo',
+    2: 'Fuego',
+    3: 'Persona atrapada',
+    4: 'Necesita ayuda',
+    5: 'A salvo',
   };
 
   // ============================================================
@@ -286,8 +286,43 @@
       cursor: pointer;
     }
     .me-btn-alarma:active { background: #262c3a; }
-    .me-btn-alarma-stop { flex: 0 0 52px; }
+    .me-btn-alarma-stop { flex: 0 0 76px; }
+
+    /* Botón de huida: lo más importante del panel, siempre visible */
+    #me-btn-huir {
+      width: 100%;
+      margin-top: 12px;
+      min-height: 56px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 2px solid #ffd54f;
+      background: #1b1f29;
+      color: #ffd54f;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    #me-btn-huir:active { background: #262c3a; }
+    #me-btn-huir svg { flex: none; }
+    #me-huir-estado {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--me-texto-tenue);
+      min-height: 16px;
+      text-align: center;
+    }
   `;
+
+  // Textos con traducción en caliente si idiomas.js está cargado
+  function tme(clave, fallback) {
+    const s = (typeof window.t === 'function') ? window.t(clave) : clave;
+    return (!s || s === clave) ? fallback : s;
+  }
 
   // ============================================================
   // 2. HTML
@@ -314,10 +349,13 @@
 
         <button id="me-btn-toggle">Activar modo emergencia</button>
 
+        <button id="me-btn-huir" type="button"></button>
+        <div id="me-huir-estado" role="status" aria-live="polite"></div>
+
         <div class="me-fila-alarmas">
-          <button class="me-btn-alarma" id="me-btn-sirena" title="Sirena audible para que personas cercanas te localicen">🔊 Sirena</button>
-          <button class="me-btn-alarma" id="me-btn-sos" title="SOS en morse, audible (··· −−− ···)">🆘 SOS sonoro</button>
-          <button class="me-btn-alarma me-btn-alarma-stop" id="me-btn-silencio" title="Callar todas las alarmas">🔇</button>
+          <button class="me-btn-alarma" id="me-btn-sirena" title="Sirena audible para que personas cercanas te localicen">Sirena</button>
+          <button class="me-btn-alarma" id="me-btn-sos" title="SOS en morse, audible (··· −−− ···)">SOS sonoro</button>
+          <button class="me-btn-alarma me-btn-alarma-stop" id="me-btn-silencio" title="Callar todas las alarmas">Silencio</button>
         </div>
 
         <div id="me-estado"><span class="me-punto"></span><span id="me-estado-txt">Modo desactivado</span></div>
@@ -395,6 +433,20 @@
       this.$log = document.getElementById('me-log');
       this.$input = document.getElementById('me-input');
       this.$enviar = document.getElementById('me-enviar');
+      this.$huir = document.getElementById('me-btn-huir');
+      this.$huirEstado = document.getElementById('me-huir-estado');
+
+      // Textos traducibles del botón de huida
+      const ICONO_FLECHA = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/></svg>';
+      const ponerTextosHuir = () => {
+        this.$huir.innerHTML = ICONO_FLECHA + '<span>' + tme('me.huir', 'Huir del incendio') + '</span>';
+        this.$huir.setAttribute('aria-label', tme('me.huirAria', 'Activa la guía de escape con flechas usando el GPS y la brújula de tu móvil. Te pedirá permiso de ubicación.'));
+      };
+      ponerTextosHuir();
+      document.addEventListener('manolito:idioma-cambiado', ponerTextosHuir);
+      window.addEventListener('manolitoforestal:idioma-cambiado', ponerTextosHuir);
+
+      this.$huir.addEventListener('click', () => this._iniciarGuiaEscape());
 
       this.$fab.addEventListener('click', () => this.$overlay.classList.add('me-abierto'));
       this.$cerrar.addEventListener('click', () => this.$overlay.classList.remove('me-abierto'));
@@ -408,13 +460,13 @@
       const btnSos = document.getElementById('me-btn-sos');
       const btnSilencio = document.getElementById('me-btn-silencio');
       if (btnSirena) btnSirena.addEventListener('click', () => {
-        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.emitirSirena(8); this._log('🔊 Sirena audible emitiendo (8 s)'); }
+        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.emitirSirena(8); this._log('Sirena audible emitiendo (8 s)'); }
       });
       if (btnSos) btnSos.addEventListener('click', () => {
-        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.emitirSOSMorse(); this._log('🆘 SOS en morse emitiendo'); }
+        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.emitirSOSMorse(); this._log('SOS en morse emitiendo'); }
       });
       if (btnSilencio) btnSilencio.addEventListener('click', () => {
-        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.pararAlarmas(); this._log('🔇 Alarmas detenidas'); }
+        if (window.BalizaUltrasonica) { window.BalizaUltrasonica.pararAlarmas(); this._log('Alarmas detenidas'); }
       });
     }
 
@@ -474,6 +526,37 @@
       this._log('Modo emergencia desactivado.');
     }
 
+    // ---------- GUÍA DE ESCAPE (flechas GPS + brújula) ----------
+    // Pide permiso de ubicación (gesto del usuario), centra el mapa en la
+    // posición real y arranca el módulo de evacuación (evacuacion.js), que
+    // pinta la flecha parpadeante hacia la zona segura y repite el rumbo
+    // en voz alta cada 10 s. Todo el cálculo ocurre en el propio móvil.
+    _iniciarGuiaEscape() {
+      if (!('geolocation' in navigator)) {
+        this.$huirEstado.textContent = tme('evac.sinGps', 'GPS no disponible. Active la ubicación del dispositivo.');
+        return;
+      }
+      this.$huirEstado.textContent = tme('me.ubicando', 'Obteniendo tu ubicación…');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const mapa = window.manolitoMapa || window.map;
+          if (mapa && mapa.setView) mapa.setView([latitude, longitude], Math.max(mapa.getZoom(), 15));
+          this.$huirEstado.textContent = tme('me.guiaActiva', 'Guía de escape activa. Sigue la flecha.');
+          if (window.manolitoEvacuacion && typeof window.manolitoEvacuacion.iniciar === 'function') {
+            this.$overlay.classList.remove('me-abierto');
+            window.manolitoEvacuacion.iniciar();
+          } else {
+            this.$huirEstado.textContent = tme('evac.sinDatos', 'Sin datos de incendios. Muévase en dirección contraria al humo y llame al 112.');
+          }
+        },
+        () => {
+          this.$huirEstado.textContent = tme('evac.sinGps', 'GPS no disponible. Active la ubicación del dispositivo.');
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    }
+
     // ---------- DETECCIÓN POR ULTRASONIDO ----------
     _alDetectarDispositivo(idRemoto) {
       // Si ya hay conexión viva o en curso, no duplicar; pero si FALLÓ
@@ -483,9 +566,9 @@
         if (previa.estado !== 'fallo') return;
         try { previa.pc.close(); } catch (e) {}
         this.conexiones.delete(idRemoto);
-        this._log(`🔄 Reintentando conexión con ${idRemoto}...`);
+        this._log(`Reintentando conexión con ${idRemoto}...`);
       }
-      this._log(`📡 Dispositivo detectado cerca: ${idRemoto}`);
+      this._log(`Dispositivo detectado cerca: ${idRemoto}`);
       this._actualizarBadge(idRemoto, 'buscando');
 
       const idPropio = this.baliza.idPropio;
@@ -511,7 +594,7 @@
         if (pc.connectionState === 'connected') {
           info.estado = 'conectado';
           this._actualizarBadge(idRemoto, 'conectado');
-          this._log(`🔴 Conectado con ${idRemoto}. Canal de datos de peligro listo.`);
+          this._log(`Conectado con ${idRemoto}. Canal de datos de peligro listo.`);
         } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
           info.estado = 'fallo';
           this._actualizarBadge(idRemoto, 'fallo');
@@ -532,11 +615,11 @@
 
     _prepararCanalDatos(canal, idRemoto, info) {
       info.canalDatos = canal;
-      canal.onopen = () => this._log(`✅ Canal de datos abierto con ${idRemoto}`);
+      canal.onopen = () => this._log(`Canal de datos abierto con ${idRemoto}`);
       // NUEVO: además del log normal, cualquier mensaje que llegue se
       // pasa por el protocolo mesh para ver si hay que retransmitirlo.
       canal.onmessage = (evento) => {
-        this._log(`⬅️ ${idRemoto}: ${evento.data}`);
+        this._log(`${idRemoto} → ${evento.data}`);
         this._meshAlLlegarMensaje(evento.data, idRemoto);
       };
     }
@@ -585,7 +668,7 @@
         try { await info.pc.addIceCandidate(candidato); } catch (e) {}
       }
       this._candidatosPendientes.delete(idRemoto);
-      if (pendientes.length) this._log(`📨 Aplicados ${pendientes.length} candidato(s) ICE que habían llegado antes de tiempo`);
+      if (pendientes.length) this._log(`Aplicados ${pendientes.length} candidato(s) ICE que habían llegado antes de tiempo`);
     }
 
     // ---------- SEÑALIZACIÓN AUTOMÁTICA VÍA TU WORKER ----------
@@ -597,7 +680,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ de: this.baliza.idPropio, para: destino, datos: conRemitente })
-      }).catch((e) => this._log('⚠️ No se pudo enviar la señal: ' + e.message));
+      }).catch((e) => this._log('No se pudo enviar la señal: ' + e.message));
     }
 
     _iniciarSondeoSenales() {
@@ -643,7 +726,7 @@
           enviados++;
         }
       }
-      this._log(`📤 Dato de peligro enviado a ${enviados} dispositivo(s)`);
+      this._log(`Dato de peligro enviado a ${enviados} dispositivo(s)`);
       return enviados;
     }
 
@@ -651,7 +734,7 @@
       const texto = this.$input.value.trim();
       if (!texto) return;
       const enviados = this.enviarDatoPeligro({ tipo: 'prueba', texto, ts: Date.now() });
-      if (enviados === 0) this._log('⚠️ No hay ninguna conexión abierta todavía con nadie');
+      if (enviados === 0) this._log('No hay ninguna conexión abierta todavía con nadie');
       this.$input.value = '';
     }
 
@@ -680,7 +763,7 @@
 
       this._meshVistos.set(mensaje.id, Date.now());
       const enviados = this._meshDifundir(mensaje, null);
-      this._log(`📢 Emergencia emitida (${MESH_NOMBRES[codigo]}) a ${enviados} dispositivo(s)`);
+      this._log(`Emergencia emitida (${MESH_NOMBRES[codigo]}) a ${enviados} dispositivo(s)`);
       return mensaje;
     }
 
