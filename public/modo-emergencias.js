@@ -558,7 +558,7 @@
     desactivar() {
       this.activo = false;
       if (this.baliza) this.baliza.detener();
-      if (this._timerSondeo) clearInterval(this._timerSondeo);
+      if (this._timerSondeo) { clearInterval(this._timerSondeo); this._timerSondeo = null; }
 
       for (const [, info] of this.conexiones) {
         try { info.pc.close(); } catch (e) {}

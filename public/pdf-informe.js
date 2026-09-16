@@ -1,11 +1,25 @@
 /**
  * MANOLIT∞ FORESTAL - Generador de informe PDF
- * Usa jsPDF (cargado por CDN en index.html) para exportar un informe
- * técnico descargable con coordenadas, lugar aproximado, datos
- * meteorológicos, % de estrés, estado del punto (rojo/amarillo/verde),
- * situación respecto al perímetro estimado de incendio activo, y
- * recomendación de zonas de trabajo.
+ * jsPDF se auto-hospeda en vendor/ y se carga PEREZOSAMENTE: solo se
+ * descargan sus ~360 KB si el usuario pulsa "Descargar informe PDF".
+ * Antes se cargaba por CDN en cada visita, uses el PDF o no.
  */
+
+// Carga perezosa de jsPDF (local, vendor/jspdf.umd.min.js). Se cachea la
+// promesa para que el segundo clic no descargue nada.
+let promesaJsPdf = null;
+function cargarJsPdf() {
+    if (window.jspdf) return Promise.resolve();
+    if (promesaJsPdf) return promesaJsPdf;
+    promesaJsPdf = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'vendor/jspdf.umd.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => { promesaJsPdf = null; reject(new Error('jspdf no cargó')); };
+        document.head.appendChild(s);
+    });
+    return promesaJsPdf;
+}
 
 async function obtenerNombreLugar(lat, lon) {
     try {
@@ -42,13 +56,15 @@ function determinarEstadoPunto(c) {
     return { color: 'verde', etiqueta: 'riesgo bajo-moderado', rgb: [40, 130, 60] };
 }
 
-function generarInformePDF(contexto) {
+async function generarInformePDF(contexto) {
     if (!contexto || !contexto.lat) {
-        alert('Selecciona primero una zona en el mapa para generar el informe.');
+        alert((typeof t === 'function' && t('pdfSeleccionaZona') !== 'pdfSeleccionaZona') ? t('pdfSeleccionaZona') : 'Selecciona primero una zona en el mapa para generar el informe.');
         return;
     }
-    if (typeof window.jspdf === 'undefined') {
-        alert('No se pudo cargar el generador de PDF. Comprueba tu conexión.');
+    try {
+        await cargarJsPdf();
+    } catch (e) {
+        alert((typeof t === 'function' && t('pdfErrorCarga') !== 'pdfErrorCarga') ? t('pdfErrorCarga') : 'No se pudo cargar el generador de PDF. Comprueba tu conexión.');
         return;
     }
 
@@ -74,7 +90,7 @@ function generarInformePDF(contexto) {
         doc.setFont('helvetica', 'bold');
 
         let textoAviso;
-        if (contexto.perimetroEstimado & contexto.perimetroEstimado.dentro) {
+        if (contexto.perimetroEstimado && contexto.perimetroEstimado.dentro) {
             textoAviso = `ALERTA: ${estado.etiqueta} — DENTRO del perímetro estimado. Aléjate. Emergencias: 112`;
         } else if (estado.color === 'rojo') {
             textoAviso = `ALERTA: ${estado.etiqueta} — si estás cerca de la zona, aléjate. Emergencias: 112`;
