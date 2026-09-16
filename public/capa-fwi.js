@@ -371,7 +371,7 @@
             // Sin mapa expuesto no podemos funcionar: no rompemos nada.
             if (typeof console !== 'undefined') {
                 console.warn('[capa-fwi] No se encontró window.manolitoMapa ni window.map. ' +
-                    'Añade `window.manolitoMapa map;` tras crear el mapa en motor-cuantico.js');
+                    'Añade: window.manolitoMapa = map; tras crear el mapa en motor-cuantico.js');
             }
         }
     }, INTERVALO_DOM_MS);
