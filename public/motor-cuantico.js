@@ -96,7 +96,9 @@ const grupoPerimetroFuegos = L.layerGroup().addTo(map);
 // Capa de áreas quemadas reales (EFFIS - Copernicus, gratis, sin API key)
 // ARREGLADO: el nombre correcto de la capa es "effis.nrt.ba.poly" (verificado
 // contra el servidor). "EFFIS:BurntAreasAll" no existe y por eso no cargaba.
-const SLD_CONTORNO_AMARILLO = '<?xml version="1.0" encoding="UTF-8"?><StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>effis.nrt.ba.poly</Name><UserStyle><FeatureTypeStyle><Rule><PolygonSymbolizer><Stroke><CssParameter name="stroke">#FFD500</CssParameter><CssParameter name="stroke-width">2</CssParameter></Stroke></PolygonSymbolizer></Rule></FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>';
+// Estilo "zona quemada" fiel a la cartografía EFFIS: interior oscuro
+// ceniza y contorno rojo intenso (como la foto de referencia del usuario).
+const SLD_CONTORNO_AMARILLO = '<?xml version="1.0" encoding="UTF-8"?><StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>effis.nrt.ba.poly</Name><UserStyle><FeatureTypeStyle><Rule><PolygonSymbolizer><Fill><CssParameter name="fill">#3a3a3a</CssParameter><CssParameter name="fill-opacity">0.62</CssParameter></Fill><Stroke><CssParameter name="stroke">#ff2b1a</CssParameter><CssParameter name="stroke-width">2.4</CssParameter></Stroke></PolygonSymbolizer></Rule></FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>';
 
 const capasEffis = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
     layers: 'effis.nrt.ba.poly',
@@ -123,7 +125,7 @@ const capasOverlay = {
 
 L.control.layers(capasBase, capasOverlay, {
     position: 'bottomright',
-    collapsed: false
+    collapsed: true   // todo se abre/cierra a voluntad; nada desplegado por defecto
 }).addTo(map);
 
 let marcadorActivo = null;      // marcador de evaluación cuántica
@@ -397,7 +399,7 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
             window.ultimoContextoManolito.zonasPrioritarias.flancoIzq.lugar = nombreFI;
             const textoConNombres = `\n\nPuntos concretos a asegurar:\n• Cabeza (avance): ${nombreCab || 'lugar no identificado'} (${latCab.toFixed(5)}, ${lonCab.toFixed(5)})\n• Flanco derecho: ${nombreFD || 'lugar no identificado'} (${latFD.toFixed(5)}, ${lonFD.toFixed(5)})\n• Flanco izquierdo: ${nombreFI || 'lugar no identificado'} (${latFI.toFixed(5)}, ${lonFI.toFixed(5)})`;
             const prefijoPerimetro = (window.ultimoContextoManolito.perimetroEstimado && window.ultimoContextoManolito.perimetroEstimado.dentro)
-                ? `⚠ ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${window.ultimoContextoManolito.perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n`
+                ? `AVISO — ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${window.ultimoContextoManolito.perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n`
                 : '';
             window.ultimoContextoManolito.recomendacionTexto = prefijoPerimetro + recomendacion.texto + textoConNombres;
             if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = (prefijoPerimetro + recomendacion.texto + textoConNombres).replace(/\n/g, '<br><br>');
@@ -407,7 +409,7 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
     const perimetroEstimado = evaluarPerimetroParaPunto(lat, lon);
     let textoRecomendacionFinal = recomendacion ? recomendacion.texto : actionText.replace(/<[^>]+>/g, '');
     if (perimetroEstimado && perimetroEstimado.dentro) {
-        const avisoPerimetro = `⚠ ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n${textoRecomendacionFinal}`;
+        const avisoPerimetro = `AVISO — ESTE PUNTO ESTÁ DENTRO DE UN PERÍMETRO ESTIMADO DE INCENDIO ACTIVO (área aproximada del foco: ${perimetroEstimado.areaHa.toFixed(1)} ha). Prioridad máxima: confirma con el 112 y no accedas a la zona sin coordinación con los servicios de extinción.\n\n${textoRecomendacionFinal}`;
         textoRecomendacionFinal = avisoPerimetro;
         if (DOM.uiPropagacion) DOM.uiPropagacion.innerHTML = avisoPerimetro.replace(/\n/g, '<br><br>');
     }
@@ -794,7 +796,7 @@ function puntoDentroPoligono(lat, lon, coordsLatLon) {
 // distancia está del más cercano (lo usa el informe y la recomendación).
 window.perimetrosActivosGeom = [];
 
-// Dado un punto, dice si está DENTRO de un perímetro activo estimado, o a
+// Dado un punto, dice si un punto está DENTRO de un perímetro activo estimado, o a
 // qué distancia (km) está del más cercano, y el área aproximada (ha) de ese foco.
 function evaluarPerimetroParaPunto(lat, lon) {
     if (!window.perimetrosActivosGeom || !window.perimetrosActivosGeom.length) return null;
@@ -821,12 +823,14 @@ function dibujarPerimetrosActivos(puntos) {
     window.perimetrosActivosGeom = [];
     if (!puntos.length) return;
 
+    // Perímetro en tiempo real con el mismo lenguaje visual que las
+    // áreas quemadas EFFIS: relleno oscuro ceniza + contorno rojo.
     const estiloPerimetro = {
-        color: '#ffd500',
-        weight: 2,
-        fillColor: '#ff4500',
-        fillOpacity: 0.15,
-        dashArray: '4 4'
+        color: '#ff2b1a',
+        weight: 2.4,
+        fillColor: '#3a3a3a',
+        fillOpacity: 0.5,
+        dashArray: '6 5'
     };
 
     const grupos = agruparPuntosFuego(puntos, 4000);
@@ -887,12 +891,20 @@ function procesarCsvFuegos(csv) {
         if (isNaN(lat) || isNaN(lon)) continue;
 
         const color = confianza === 'h' ? '#ff4500' : (confianza === 'n' ? '#ffaa00' : '#ff0000');
-        const marker = L.circleMarker([lat, lon], {
-            radius: 7,
-            fillColor: color,
-            color: '#fff',
-            weight: 1,
-            fillOpacity: 0.8
+        // Marcador en forma de llama (SVG, no cuadrado ni emoji): fiel a
+        // lo que hay en el terreno. El color indica la confianza VIIRS.
+        const marker = L.marker([lat, lon], {
+            icon: L.divIcon({
+                className: 'mf-fuego-icono',
+                html: '<svg width="26" height="34" viewBox="0 0 24 32" aria-hidden="true">' +
+                    '<path d="M12 1 C13.5 6 18 8.5 18 15 a7.5 7.5 0 0 1-15 0 C4.5 11 6 10 7 7.5 8 10 9.5 11 10 11 c0-4 1-8 2-10 Z" ' +
+                    'fill="' + color + '" stroke="#fff" stroke-width="1.2"/>' +
+                    '<path d="M12 13 c2 2.5 3.5 4 3.5 6.5 a4 4 0 0 1-8 0 c0-2.5 1.5-4 4.5-6.5 Z" fill="#ffd54f" opacity="0.9"/>' +
+                    '</svg>',
+                iconSize: [26, 34],
+                iconAnchor: [13, 32],
+                popupAnchor: [0, -30]
+            })
         }).addTo(grupoFuegos);
 
         marker.bindPopup(`
@@ -947,6 +959,13 @@ async function cargarFuegosActivos() {
 
 // 8. INTERACTIVIDAD DE LA INTERFAZ Y LÓGICA LEGAL
 function setupUIInteractions() {
+    // En pantallas estrechas el panel arranca cerrado: nada desplegado
+    // por defecto, todo se abre a voluntad (excepto emergencias).
+    if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
+        DOM.dashboard.classList.add('closed');
+        DOM.reopenDashboardBtn.style.display = 'block';
+    }
+
     DOM.toggleDashboardBtn.addEventListener('click', function () {
         DOM.dashboard.classList.add('closed');
         DOM.reopenDashboardBtn.style.display = 'block';
