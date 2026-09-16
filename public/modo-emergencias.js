@@ -316,6 +316,26 @@
       min-height: 16px;
       text-align: center;
     }
+
+    /* Vigilancia de proximidad: secundaria, dentro del panel (nada flota en el mapa) */
+    #me-btn-vigilar {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 48px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--me-borde);
+      background: #1b1f29;
+      color: var(--me-texto);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #me-btn-vigilar:active { background: #262c3a; }
+    #me-btn-vigilar[aria-pressed="true"] {
+      border-color: #3ddc6a;
+      color: #3ddc6a;
+    }
   `;
 
   // Textos con traducción en caliente si idiomas.js está cargado
@@ -351,6 +371,7 @@
 
         <button id="me-btn-huir" type="button"></button>
         <div id="me-huir-estado" role="status" aria-live="polite"></div>
+        <button id="me-btn-vigilar" type="button" aria-pressed="false"></button>
 
         <div class="me-fila-alarmas">
           <button class="me-btn-alarma" id="me-btn-sirena" title="Sirena audible para que personas cercanas te localicen">Sirena</button>
@@ -435,6 +456,7 @@
       this.$enviar = document.getElementById('me-enviar');
       this.$huir = document.getElementById('me-btn-huir');
       this.$huirEstado = document.getElementById('me-huir-estado');
+      this.$vigilar = document.getElementById('me-btn-vigilar');
 
       // Textos traducibles del botón de huida
       const ICONO_FLECHA = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/></svg>';
@@ -448,7 +470,33 @@
 
       this.$huir.addEventListener('click', () => this._iniciarGuiaEscape());
 
-      this.$fab.addEventListener('click', () => this.$overlay.classList.add('me-abierto'));
+      // Vigilancia de proximidad: avisa (banner cerrable) si un perímetro
+      // activo se acerca. Vive aquí, en el panel — nada flota en el mapa.
+      const vigilanciaActiva = () => !!(window.manolitoEvacuacion && window.manolitoEvacuacion.estado && window.manolitoEvacuacion.estado.monitorizando);
+      const ponerTextosVigilar = () => {
+        const activa = vigilanciaActiva();
+        this.$vigilar.textContent = activa
+          ? tme('evac.vigilando', 'Vigilancia de proximidad activa — toca para parar')
+          : tme('evac.vigilar', 'Avisarme si hay fuego cerca (usa GPS)');
+        this.$vigilar.setAttribute('aria-pressed', activa ? 'true' : 'false');
+      };
+      ponerTextosVigilar();
+      document.addEventListener('manolito:idioma-cambiado', ponerTextosVigilar);
+      window.addEventListener('manolitoforestal:idioma-cambiado', ponerTextosVigilar);
+      this.$vigilar.addEventListener('click', () => {
+        if (!window.manolitoEvacuacion) {
+          this.$huirEstado.textContent = tme('evac.sinDatos', 'Sin datos de incendios. Muévase en dirección contraria al humo y llame al 112.');
+          return;
+        }
+        if (vigilanciaActiva()) window.manolitoEvacuacion.detenerVigilancia();
+        else window.manolitoEvacuacion.vigilar();
+        ponerTextosVigilar();
+      });
+
+      this.$fab.addEventListener('click', () => {
+        ponerTextosVigilar(); // por si la vigilancia cambió con el panel cerrado
+        this.$overlay.classList.add('me-abierto');
+      });
       this.$cerrar.addEventListener('click', () => this.$overlay.classList.remove('me-abierto'));
       this.$overlay.addEventListener('click', (e) => { if (e.target === this.$overlay) this.$overlay.classList.remove('me-abierto'); });
       this.$toggle.addEventListener('click', () => this.activo ? this.desactivar() : this.activar());
@@ -550,8 +598,21 @@
             this.$huirEstado.textContent = tme('evac.sinDatos', 'Sin datos de incendios. Muévase en dirección contraria al humo y llame al 112.');
           }
         },
-        () => {
-          this.$huirEstado.textContent = tme('evac.sinGps', 'GPS no disponible. Active la ubicación del dispositivo.');
+        (err) => {
+          // Diagnóstico claro: permiso denegado, sin señal o timeout
+          let clave = 'evac.sinGps';
+          let fb = 'GPS no disponible. Active la ubicación del dispositivo.';
+          if (err && err.code === 1) {
+            clave = 'evac.errorPermiso';
+            fb = 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador.';
+          } else if (err && err.code === 2) {
+            clave = 'evac.errorSinSenal';
+            fb = 'Sin señal de ubicación. Sal a cielo abierto o activa la ubicación del sistema.';
+          } else if (err && err.code === 3) {
+            clave = 'evac.errorTimeout';
+            fb = 'El GPS tarda demasiado en responder. Inténtalo de nuevo a cielo abierto.';
+          }
+          this.$huirEstado.textContent = tme(clave, fb);
         },
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
