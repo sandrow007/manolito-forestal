@@ -161,7 +161,7 @@
         boton.setAttribute('aria-pressed', 'false');
         boton.setAttribute('aria-label', tr('fwiToggleActivar'));
         boton.innerHTML = '<span class="fwi-spinner" aria-hidden="true"></span>' +
-            '<span aria-hidden="true">🔥</span>' +
+            '<span aria-hidden="true">' + '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 C13.2 6.5 17 8.5 17 13.6 a5 5 0 0 1-10 0 C7 10.5 8 9.5 8.8 7.6 9.6 9.5 10.6 10.2 11 10.2 c0-3.4 .6-6.6 1-8.2 Z" fill="currentColor"/></svg>' + '</span>' +
             '<span class="fwi-texto"></span>';
         boton.querySelector('.fwi-texto').textContent = tr('fwiToggle');
         boton.addEventListener('click', function () { api.toggle(); });
@@ -371,7 +371,7 @@
             // Sin mapa expuesto no podemos funcionar: no rompemos nada.
             if (typeof console !== 'undefined') {
                 console.warn('[capa-fwi] No se encontró window.manolitoMapa ni window.map. ' +
-                    'Añade `window.manolitoMapa = map;` tras crear el mapa en motor-cuantico.js');
+                    'Añade `window.manolitoMapa map;` tras crear el mapa en motor-cuantico.js');
             }
         }
     }, INTERVALO_DOM_MS);

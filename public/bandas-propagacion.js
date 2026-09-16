@@ -230,7 +230,7 @@ function renderizar(lat, lng, datos) {
         keyboard: true,
         icon: L.divIcon({
             className: 'banda-aviso-icono',
-            html: '<span aria-hidden="true" style="font-size:18px">⚠️</span>',
+            html: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L22 20 H2 Z" fill="#ffb300" stroke="#000" stroke-width="1"/><rect x="11" y="9" width="2" height="6" fill="#000"/><rect x="11" y="16.5" width="2" height="2" fill="#000"/></svg>',
             iconSize: [24, 24],
             iconAnchor: [12, 30]
         }),
@@ -331,7 +331,7 @@ function asegurarBoton() {
     botonToggle.setAttribute('aria-pressed', String(visible));
     botonToggle.setAttribute('aria-label', tr('bandasTituloToggle'));
     botonToggle.title = tr('bandasTituloToggle');
-    botonToggle.textContent = '🔥';
+    botonToggle.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 C13.2 6.5 17 8.5 17 13.6 a5 5 0 0 1-10 0 C7 10.5 8 9.5 8.8 7.6 9.6 9.5 10.6 10.2 11 10.2 c0-3.4 .6-6.6 1-8.2 Z" fill="currentColor"/></svg>';
     botonToggle.addEventListener('click', function () { api.toggle(); });
     document.body.appendChild(botonToggle);
 
