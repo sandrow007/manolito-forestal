@@ -22,6 +22,7 @@
             <li><strong>Calcula la propagación potencial del fuego con el modelo de Rothermel (1972)</strong> —el estándar internacional, núcleo de BehavePlus, FARSITE y FlamMap— usando los 13 modelos de combustible de Anderson (1982). El modelo de combustible se elige según la vegetación real del punto en OpenStreetMap, y la pendiente del terreno se estima a partir de datos de elevación (Open-Meteo). De aquí salen: velocidad de avance de la cabeza del fuego (m/min), carga de combustible fino superficial (t/ha) e intensidad.</li>
             <li><strong>Calcula intensidad y longitud de llama</strong> con las relaciones de Byram (1959), y la <strong>distancia mínima de zona de seguridad</strong> con el criterio de Butler &amp; Cohen (1998): cuatro veces la altura de llama.</li>
             <li><strong>Indica direcciones de escape</strong> a partir de la geometría del incendio (cabeza a sotavento, flancos perpendiculares, cola a barlovento), con cardinales concretos según el viento del momento.</li>
+            <li><strong>Guía de evacuación con flecha en pantalla:</strong> con tu posición GPS y la brújula del móvil, localiza la zona segura más cercana y orienta una flecha grande hacia ella, con indicaciones por voz opcionales. Una vez descargados los datos de la zona, funciona sin conexión a internet. Ver sección 3ter para sus límites.</li>
             <li><strong>Calcula el estrés de biomasa</strong> con un modelo cuántico de 3 qubits con entrelazamiento (puertas RY/CNOT y medición según la regla de Born), como indicador complementario de síntesis.</li>
             <li><strong>Responde preguntas técnicas</strong> a través del asesor Manolito, que razona sobre los cálculos reales del punto (FFWI, velocidad de propagación, llama, escape) y aplica doctrina operativa de incendios: protocolo LCES, umbrales de ataque directo según intensidad, priorización de franjas según viento y técnicas de gestión de combustible (desbroce, claras, poda de pies bajos, fajas auxiliares, franjas de interfaz urbano-forestal).</li>
             <li><strong>Genera un informe descargable en PDF</strong> con coordenadas, localidad aproximada, datos meteorológicos y la recomendación de zonas de trabajo.</li>
@@ -55,6 +56,19 @@
     </section>
 
     <section>
+        <h3>3ter. Sistema de evacuación GPS — alcance y límites</h3>
+        <p><strong>La guía de evacuación es una herramienta de orientación, no un sistema de rescate ni una garantía de seguridad. No sustituye bajo ningún concepto al 112, a Protección Civil ni a las instrucciones de los servicios de extinción.</strong></p>
+        <ul>
+            <li><strong>Cómo funciona:</strong> con la posición del GPS y el sensor de orientación (brújula) del propio móvil, la app calcula qué zona segura de las conocidas está más cerca de ti (distancia en línea recta) y dibuja en pantalla una flecha que apunta hacia ella. Todo el cálculo ocurre en el dispositivo.</li>
+            <li><strong>La flecha señala en línea recta.</strong> No calcula una ruta caminable: no sabe por dónde avanza el fuego en este momento, ni esquiva ríos, cortados, cercados ni terreno intransitable. La dirección más corta puede no ser transitable ni segura; tu criterio sobre el terreno manda.</li>
+            <li><strong>Son sensores físicos y pueden fallar:</strong> el GPS necesita visión razonable del cielo (bajo dosel forestal denso, en barrancos o entre edificios la posición puede degradarse o tardar en fijarse), y la brújula se ve alterada por masas metálicas, líneas eléctricas o vehículos cercanos. Si la señal es mala, la app lo indica en pantalla en lugar de inventar una dirección.</li>
+            <li><strong>Sin conexión, los datos son los últimos descargados.</strong> El GPS y la brújula siguen funcionando sin cobertura, pero la lista de zonas seguras y los perímetros de fuego son los que quedaron guardados la última vez que hubo conexión: la situación real del incendio puede haber cambiado. La app muestra la antigüedad de los datos que usa.</li>
+            <li><strong>Nadie recibe aviso de que la usas.</strong> Activar la guía no notifica al 112 ni a ningún contacto, y no comparte tu posición con nadie. Si estás en peligro, llama al 112: la flecha te orienta, no te rescata.</li>
+            <li><strong>En una emergencia real, prioriza siempre las indicaciones de bomberos, Protección Civil, UME o cualquier servicio oficial presente</strong> por encima de cualquier indicación de esta herramienta.</li>
+        </ul>
+    </section>
+
+    <section>
         <h3>4. Privacidad y tratamiento de datos</h3>
         <ul>
             <li><strong>Consultas meteorológicas y de elevación:</strong> al hacer clic en el mapa, el navegador consulta directamente la API pública de Open-Meteo con las coordenadas seleccionadas. No almacenamos esas consultas en servidores propios.</li>
@@ -63,6 +77,7 @@
             <li><strong>Chat con Manolito:</strong> los mensajes que envíes al asesor, junto con el contexto de la zona seleccionada (coordenadas, meteorología, resultados del motor científico), se envían a un proxy propio en Cloudflare que reenvía la consulta a un modelo de lenguaje para generar la respuesta. No se almacenan conversaciones de forma permanente ni se usan con fines distintos a responder la consulta.</li>
             <li><strong>Modo emergencia:</strong> la detección por ultrasonido ocurre íntegramente en el dispositivo (no se graba ni se envía audio). Para el arranque de la conexión WebRTC se depositan mensajes técnicos temporales (identificadores de sesión y parámetros de conexión) en un buzón en Cloudflare KV con caducidad automática de 60 segundos; se borran al leerlos. Los mensajes de emergencia viajan directamente entre los dispositivos (canal de datos WebRTC) y no pasan por ningún servidor.</li>
             <li><strong>Permiso de micrófono:</strong> solo se solicita al activar el modo emergencia, y se usa exclusivamente para la detección de tonos ultrasónicos en tiempo real. Puedes revocarlo en cualquier momento desde los ajustes del navegador.</li>
+            <li><strong>Geolocalización (guía de evacuación):</strong> la posición GPS se solicita únicamente al usar la guía de escape (por ejemplo, con el botón "Huir del incendio") y se procesa íntegramente en tu dispositivo para calcular distancias y rumbos hacia las zonas seguras. Nunca sale del móvil: no se envía a ningún servidor, no se asocia a ningún identificador y no se usa para nada más. Las zonas seguras descargadas se guardan en el almacenamiento local del navegador (IndexedDB) para que la guía funcione sin conexión; puedes borrarlas en cualquier momento limpiando los datos del sitio desde los ajustes del navegador, y revocar el permiso de ubicación del mismo modo.</li>
             <li><strong>Sin registros ni cuentas:</strong> no se requieren correos electrónicos, contraseñas ni registros de ningún tipo para usar el simulador.</li>
         </ul>
     </section>

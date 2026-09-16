@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#070a10">
-<title>Manolit∞ Forestal · Predictor cuántico de incendios</title>
-<meta name="description" content="Manolit∞ Forestal: mapa en tiempo real de incendios activos (NASA FIRMS), áreas quemadas (EFFIS/Copernicus), perímetro estimado de propagación y asesor cuántico de riesgo de biomasa forestal.">
+<title>Manolit∞ Forestal · Incendios en tiempo real y riesgo de propagación</title>
+<meta name="description" content="Manolit∞ Forestal: mapa en tiempo real de incendios activos (NASA FIRMS), áreas quemadas (EFFIS/Copernicus), perímetro estimado de propagación y motor de comportamiento del fuego (Fosberg, Rothermel, Byram). Código abierto, gratis y sin registro.">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -156,6 +156,8 @@
         margin-bottom: 6px; overflow-wrap: break-word;
     }
     #quantum-log-section.section-collapsed .log-line { display: none; }
+    #quantum-log-section h2 .ql-ind { display: inline-block; transition: transform 0.2s ease; }
+    #quantum-log-section.section-collapsed h2 .ql-ind { transform: rotate(-90deg); }
 
 
     .btn-primary {
@@ -286,8 +288,8 @@
 
     <div id="contador-fuegos"></div>
 
-    <section id="quantum-log-section">
-        <h2>Registro cuántico ▾</h2>
+    <section id="quantum-log-section" class="section-collapsed">
+        <h2><span>Registro cuántico</span><span class="ql-ind">▾</span></h2>
         <div class="log-line" id="log-ry">Sin ejecutar aún.</div>
         <div class="log-line" id="log-cnot"></div>
         <div class="log-line" id="log-medicion"></div>
@@ -340,5 +342,6 @@
 <script src="capa-recursos.js" defer></script>
 <script src="bandas-propagacion.js" defer></script>
 <script src="pwa-offline.js" defer></script>
+<script src="evacuacion.js" defer></script>
 </body>
 </html>
