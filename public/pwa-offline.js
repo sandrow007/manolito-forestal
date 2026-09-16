@@ -39,6 +39,8 @@
     var badge = null;
     var boton = null;
     var zonaProgreso = null;
+    var zonaTexto = null;
+    var barraProgreso = null;
     var enLinea = navigator.onLine;
     var preparando = false;
 
@@ -128,13 +130,18 @@
 
     function actualizarBadge() {
         if (!badge) return;
+        // Sin emojis: el color de fondo ya comunica el estado (cian = en
+        // línea, naranja = sin conexión) y un punto CSS refuerza el texto.
+        const punto = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:7px;vertical-align:1px"></span>';
         if (enLinea) {
-            badge.textContent = '📶 ' + tt('pwa.online');
+            badge.innerHTML = punto;
+            badge.appendChild(document.createTextNode(tt('pwa.online')));
             badge.style.background = '#00f3ff';
             // En línea: visible un momento y luego se atenúa para no estorbar.
             badge.style.opacity = '0.35';
         } else {
-            badge.textContent = '📵 ' + tt('pwa.offline');
+            badge.innerHTML = punto;
+            badge.appendChild(document.createTextNode(tt('pwa.offline')));
             badge.style.background = '#ff9f43';
             badge.style.opacity = '1';
         }
@@ -167,7 +174,7 @@
             'border-radius:12px;background:#00f3ff;color:#070a10;cursor:pointer;' +
             'font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.6);';
         boton.setAttribute('aria-label', tt('pwa.prepararZona'));
-        boton.textContent = '⬇️ ' + tt('pwa.prepararZona');
+        boton.textContent = tt('pwa.prepararZona');
         boton.addEventListener('click', prepararZona);
 
         zonaProgreso = document.createElement('div');
@@ -176,17 +183,30 @@
         zonaProgreso.setAttribute('aria-live', 'polite');
         zonaProgreso.style.cssText =
             'position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);' +
-            'z-index:1800;max-width:min(320px,80vw);padding:6px 12px;border-radius:8px;' +
-            'background:rgba(7,10,16,.9);color:#00f3ff;font:600 12px/1.4 system-ui,sans-serif;' +
-            'display:none;';
+            'z-index:1800;width:min(320px,80vw);padding:10px 12px;border-radius:10px;' +
+            'background:rgba(7,10,16,.92);color:#00f3ff;font:600 12px/1.4 system-ui,sans-serif;' +
+            'display:none;border:1px solid rgba(0,243,255,.25);';
+        // Barra de progreso real debajo del texto
+        var barraWrap = document.createElement('div');
+        barraWrap.style.cssText = 'height:6px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden;';
+        barraProgreso = document.createElement('div');
+        barraProgreso.style.cssText = 'height:100%;width:0%;background:#00f3ff;transition:width .25s ease;';
+        barraWrap.appendChild(barraProgreso);
+        zonaProgreso.appendChild(barraWrap);
+        zonaTexto = document.createElement('div');
+        zonaProgreso.insertBefore(zonaTexto, barraWrap);
         document.body.appendChild(boton);
         document.body.appendChild(zonaProgreso);
     }
 
-    function mostrarProgreso(texto) {
+    function mostrarProgreso(texto, pct) {
         if (!zonaProgreso) return;
-        zonaProgreso.textContent = texto;
+        zonaTexto.textContent = texto;
         zonaProgreso.style.display = texto ? 'block' : 'none';
+        if (barraProgreso) {
+            var v = (typeof pct === 'number' && isFinite(pct)) ? Math.max(0, Math.min(100, pct)) : 0;
+            barraProgreso.style.width = v + '%';
+        }
     }
 
     function escucharMensajesSW() {
@@ -194,14 +214,15 @@
         navigator.serviceWorker.addEventListener('message', function (event) {
             var d = event.data || {};
             if (d.type === 'PRECARGA_PROGRESO') {
-                mostrarProgreso(tt('pwa.preparando').replace('{hechas}', d.hechas).replace('{total}', d.total));
+                var pct = (d.total > 0) ? (d.hechas / d.total) * 100 : 0;
+                mostrarProgreso(tt('pwa.preparando').replace('{hechas}', d.hechas).replace('{total}', d.total), pct);
             } else if (d.type === 'PRECARGA_COMPLETA') {
                 preparando = false;
                 if (boton) boton.disabled = false;
                 if (d.error) {
-                    mostrarProgreso(tt('pwa.zonaError'));
+                    mostrarProgreso(tt('pwa.zonaError'), 0);
                 } else {
-                    mostrarProgreso(tt('pwa.zonaLista').replace('{tiles}', d.tiles));
+                    mostrarProgreso(tt('pwa.zonaLista').replace('{tiles}', d.tiles), 100);
                     // Guardar también los últimos FIRMS para consulta offline.
                     guardarFirmsCache().catch(function () {});
                 }
