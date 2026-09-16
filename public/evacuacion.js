@@ -26,7 +26,12 @@
  *    al mapa (estilo brújula militar), legible con sol, con guantes y
  *    corriendo. Botones >= 48px, role="alert", vibra en alerta roja.
  *
- * Expone: window.manolitoEvacuacion = { iniciar, detener, estado }
+ * Expone: window.manolitoEvacuacion = { iniciar, detener, vigilar,
+ *   detenerVigilancia, estado }
+ * SIN WIDGET FLOTANTE: este módulo no pinta ningún botón permanente en
+ * el mapa. La activación se hace desde el modo de emergencias
+ * (modo-emergencias.js): botón "Huir del incendio" y vigilancia de
+ * proximidad. Aquí solo viven la flecha, el panel y los avisos.
  * Respeta 'manolito:pausa' / 'manolito:reanudar' (batería): la
  * monitorización se duerme con la pestaña oculta; una evacuación ACTIVA
  * mantiene el GPS porque la vida manda sobre la batería.
@@ -60,6 +65,11 @@
         'evac.sigueHacia': 'Sigue hacia el {card}',
         'evac.calibraBrujula': 'Brújula errática: calibra moviendo el móvil en forma de 8',
         'evac.gpsEdad': 'hace {s} s',
+        'evac.errorPermiso': 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador.',
+        'evac.errorSinSenal': 'Sin señal de ubicación. Sal a cielo abierto o activa la ubicación del sistema.',
+        'evac.errorTimeout': 'El GPS tarda demasiado en responder. Inténtalo de nuevo a cielo abierto.',
+        'evac.vigilar': 'Avisarme si hay fuego cerca (usa GPS)',
+        'evac.vigilando': 'Vigilancia de proximidad activa — toca para parar',
         'evac.avisoLineaRecta': 'La flecha marca la dirección más corta, no una ruta segura garantizada: no esquiva el fuego ni el terreno. Prioriza siempre las indicaciones de Protección Civil y bomberos.'
     };
 
@@ -362,13 +372,18 @@
 
     function alErrorGps(err) {
         console.warn('[Evacuación] GPS:', err.message);
+        // Diagnóstico claro según el motivo del fallo (permiso, señal, timeout)
+        let clave = 'evac.sinGps';
+        if (err && err.code === 1) clave = 'evac.errorPermiso';
+        else if (err && err.code === 2) clave = 'evac.errorSinSenal';
+        else if (err && err.code === 3) clave = 'evac.errorTimeout';
         if (estado.evacuando) {
             // Failsafe: si el GPS falla en plena evacuación, no soltamos al
             // usuario — pasamos a brújula pura con el último rumbo conocido.
             estado.modoBrujulaPuro = true;
             pintarEstadoNav();
         } else {
-            pintarBanner(tt('evac.sinGps'), 'amarilla');
+            pintarBanner(tt(clave), 'amarilla');
         }
     }
 
@@ -445,7 +460,6 @@
         watchMonitoreo = navigator.geolocation.watchPosition(alPosicionMonitoreo, alErrorGps, {
             enableHighAccuracy: false, maximumAge: 30000, timeout: 20000
         });
-        actualizarBoton();
     }
 
     function detenerMonitoreo() {
@@ -454,7 +468,6 @@
         estado.monitorizando = false;
         estado.nivelAlerta = null;
         ocultarBanner();
-        actualizarBoton();
     }
 
     async function iniciarEvacuacion() {
@@ -475,7 +488,6 @@
         });
         timerFlecha = setInterval(bucleFlecha, REDIBUJO_MS);
         timerVoz = setInterval(repetirInstruccion, REPETIR_INSTRUCCION_MS);
-        actualizarBoton();
     }
 
     function detenerEvacuacion() {
@@ -492,8 +504,8 @@
         ocultarNav();
         ocultarBanner();
         limpiarVectorEnMapa();
-        iniciarMonitoreo(); // vuelve a vigilancia de bajo consumo
-        actualizarBoton();
+        // La vigilancia de proximidad NO se reactiva sola: la controla el
+        // usuario desde el modo de emergencias (evita avisos no pedidos).
     }
 
     // ================= Mapa: vector de escape =================
@@ -531,18 +543,16 @@
     function inyectarEstilos() {
         if (document.getElementById('evac-estilos')) return;
         const css = `
-#evac-boton{position:fixed;right:12px;bottom:96px;z-index:1200;min-width:48px;min-height:48px;
- padding:10px 14px;border-radius:24px;border:2px solid #fff;background:#b71c1c;color:#fff;
- font-size:15px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.5);cursor:pointer;
- display:flex;align-items:center;gap:6px}
-#evac-boton[aria-pressed="true"]{background:#1b5e20}
-#evac-alerta{position:fixed;top:0;left:0;right:0;z-index:1300;padding:12px 14px;font-size:17px;
+#evac-alerta{position:fixed;top:0;left:0;right:0;z-index:1300;padding:12px 52px 12px 14px;font-size:17px;
  font-weight:700;text-align:center;display:none;line-height:1.35}
 #evac-alerta.roja{background:#b71c1c;color:#fff;animation:evacParpadeo 1s step-start infinite}
 #evac-alerta.amarilla{background:#ffb300;color:#000}
 #evac-alerta button{min-width:48px;min-height:48px;margin-top:8px;font-size:16px;font-weight:700;
  border-radius:10px;border:2px solid currentColor;background:transparent;color:inherit;cursor:pointer;
  display:block;width:100%}
+#evac-alerta .evac-cerrar-alerta{position:absolute;top:2px;right:4px;width:48px;min-width:48px;
+ height:48px;min-height:48px;margin:0;padding:0;display:flex;align-items:center;justify-content:center;
+ border:none;background:transparent;color:inherit;font-size:20px;font-weight:700;cursor:pointer}
 #evac-nav{position:fixed;inset:0;z-index:1250;pointer-events:none;display:none}
 #evac-flecha{position:absolute;top:18%;left:50%;margin-left:-70px;width:140px;height:140px;
  transform-origin:50% 50%;will-change:transform}
@@ -574,21 +584,10 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
     }
 
     // ================= UI: DOM =================
-    let elBoton, elBanner, elNav, elFlecha, elDist, elRumbo, elEstado, elNota, elAviso;
+    let elBanner, elNav, elFlecha, elDist, elRumbo, elEstado, elNota, elAviso;
 
     function construirUI() {
         inyectarEstilos();
-
-        elBoton = document.createElement('button');
-        elBoton.id = 'evac-boton';
-        elBoton.type = 'button';
-        elBoton.setAttribute('aria-pressed', 'false');
-        elBoton.addEventListener('click', () => {
-            if (estado.evacuando) detenerEvacuacion();
-            else if (estado.monitorizando) detenerMonitoreo();
-            else iniciarMonitoreo();
-        });
-        document.body.appendChild(elBoton);
 
         elBanner = document.createElement('div');
         elBanner.id = 'evac-alerta';
@@ -625,9 +624,6 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
     }
 
     function actualizarTextos() {
-        if (!elBoton) return;
-        actualizarBoton();
-        elBoton.setAttribute('aria-label', tt('evac.botonAria'));
         const btnCerrar = document.getElementById('evac-cerrar');
         if (btnCerrar) btnCerrar.textContent = tt('evac.detener');
         if (elNota) {
@@ -642,15 +638,6 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
         if (elAviso) elAviso.textContent = tt('evac.avisoLineaRecta');
         ultimoTextoEstado = ''; // fuerza repintar la línea de estado en el nuevo idioma
         if (estado.evacuando) pintarEstadoNav();
-    }
-
-    function actualizarBoton() {
-        if (!elBoton) return;
-        const activo = estado.evacuando || estado.monitorizando;
-        elBoton.setAttribute('aria-pressed', activo ? 'true' : 'false');
-        const etiqueta = estado.evacuando ? tt('evac.detener') : tt('evac.boton');
-        elBoton.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/></svg><span></span>';
-        elBoton.querySelector('span').textContent = etiqueta;
     }
 
     function pintarBanner(texto, nivel, conBoton) {
@@ -668,6 +655,22 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
             btn.addEventListener('click', iniciarEvacuacion);
             elBanner.appendChild(btn);
         }
+        // Toda notificación se puede cerrar: el mapa manda.
+        const btnX = document.createElement('button');
+        btnX.type = 'button';
+        btnX.className = 'evac-cerrar-alerta';
+        btnX.textContent = '✕';
+        btnX.setAttribute('aria-label', tt('evac.cerrar'));
+        btnX.addEventListener('click', descartarBanner);
+        elBanner.appendChild(btnX);
+    }
+
+    function descartarBanner() {
+        ocultarBanner();
+        estado.nivelAlerta = null;
+        // Si era un aviso de proximidad (no una evacuación activa), se deja
+        // de vigilar para que el aviso no reaparezca a los pocos segundos.
+        if (estado.monitorizando && !estado.evacuando) detenerMonitoreo();
     }
 
     function ocultarBanner() {
@@ -878,6 +881,8 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
     window.manolitoEvacuacion = {
         iniciar: iniciarEvacuacion,
         detener: detenerEvacuacion,
+        vigilar: iniciarMonitoreo,
+        detenerVigilancia: detenerMonitoreo,
         estado
     };
 })();
