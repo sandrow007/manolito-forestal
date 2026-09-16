@@ -99,18 +99,25 @@
         var css = document.createElement('style');
         css.id = 'capa-fwi-css';
         css.textContent = [
-            '#capa-fwi-wrap{position:absolute;top:64px;left:16px;z-index:500;',
-            '  font-family:inherit;max-width:min(300px,calc(100vw - 32px));}',
-            '#capa-fwi-toggle{min-width:48px;min-height:48px;display:flex;',
-            '  align-items:center;gap:8px;padding:10px 14px;cursor:pointer;',
-            '  border-radius:8px;font-size:0.85rem;font-weight:600;',
+            // Botón FWI: cuadrado de 48px SOLO con icono, debajo del control
+            // de zoom de Leaflet (que ocupa ~78px). Nada de tarjetas anchas
+            // que tapan el +/-: ocupa lo mismo que un botón de zoom.
+            '#capa-fwi-wrap{position:absolute;top:118px;left:10px;z-index:500;',
+            '  font-family:inherit;max-width:min(280px,calc(100vw - 32px));}',
+            '#capa-fwi-toggle{width:48px;min-width:48px;height:48px;min-height:48px;',
+            '  display:flex;align-items:center;justify-content:center;padding:0;',
+            '  cursor:pointer;border-radius:10px;',
             '  border:1px solid rgba(0,243,255,0.35);',
             '  background:rgba(5,16,19,0.85);color:#e8f6f8;',
             '  box-shadow:0 2px 10px rgba(0,0,0,0.4);}',
+            // El texto del botón existe para lectores de pantalla, pero no
+            // ocupa sitio en el mapa (patrón visually-hidden).
+            '#capa-fwi-toggle .fwi-texto{position:absolute;width:1px;height:1px;',
+            '  overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;}',
             '#capa-fwi-toggle:hover{filter:brightness(1.15);}',
             '#capa-fwi-toggle:focus-visible{outline:3px solid #00f3ff;outline-offset:2px;}',
             '#capa-fwi-toggle[aria-pressed="true"]{',
-            '  background:rgba(255,165,0,0.18);border-color:rgba(255,165,0,0.75);}',
+            '  background:rgba(255,165,0,0.28);border-color:rgba(255,165,0,0.85);}',
             '#capa-fwi-toggle .fwi-spinner{display:none;width:16px;height:16px;',
             '  border:2px solid rgba(255,255,255,0.25);border-top-color:#ffa500;',
             '  border-radius:50%;animation:fwi-giro 0.8s linear infinite;}',
@@ -141,9 +148,8 @@
             '#capa-fwi-leyenda-lista .fwi-rango{margin-left:auto;opacity:0.75;',
             '  font-variant-numeric:tabular-nums;}',
             '#capa-fwi-leyenda-fuente{margin-top:6px;font-size:0.65rem;opacity:0.6;}',
-            '@media (max-width:480px){',
-            '  #capa-fwi-wrap{top:auto;bottom:90px;left:12px;max-width:calc(100vw - 24px);}',
-            '}'
+            // En móvil también arriba a la izquierda, bajo el zoom: abajo
+            // chocaba con "Preparar zona" y con el botón de emergencias.
         ].join('\n');
         document.head.appendChild(css);
     }
