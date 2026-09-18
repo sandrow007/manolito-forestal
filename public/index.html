@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%0A%20%20%3Crect%20width=%22512%22%20height=%22512%22%20rx=%2296%22%20fill=%22%23070a10%22/%3E%0A%20%20%3Cpath%20fill=%22%23ff6b00%22%20d=%22M256%2072c44%2064%20104%20104%20104%20188%200%2060-46%20108-104%20108s-104-48-104-108c0-48%2026-78%2052-112%208%2026%2026%2044%2044%2052-10-60-2-102%208-128z%22/%3E%0A%20%20%3Cpath%20fill=%22%23ffd500%22%20d=%22M256%20210c22%2034%2052%2056%2052%20104%200%2034-24%2062-52%2062s-52-28-52-62c0-26%2014-44%2028-62%204%2016%2014%2026%2024%2030-6-34-2-58%200-72z%22/%3E%0A%3C/svg%3E">
 <meta name="theme-color" content="#070a10">
 <title>Manolit∞ Forestal · Incendios en tiempo real y riesgo de propagación</title>
 <meta name="description" content="Manolit∞ Forestal: mapa en tiempo real de incendios activos (NASA FIRMS), áreas quemadas (EFFIS/Copernicus), perímetro estimado de propagación y motor de comportamiento del fuego (Fosberg, Rothermel, Byram). Código abierto, gratis y sin registro.">
@@ -16,7 +17,7 @@
 <!-- Fuentes: Google Fonts, solo los pesos usados -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 
 <style>
     :root {
@@ -340,17 +341,8 @@
     crossorigin="" defer></script>
 <!-- jsPDF (~360 KB) ya NO se carga en cada visita: pdf-informe.js lo
      descarga del CDN oficial solo cuando el usuario pulsa "Descargar informe". -->
-<script src="idiomas.js" defer></script>
-<script src="baliza-ultrasonica.js"></script>
-<script src="modo-emergencias.js"></script>
-<script src="motor-fuego-cientifico.js" defer></script>
+<!-- Todo el JavaScript va en UN solo archivo (motor-cuantico.js):
+     de 12 peticiones a 1. Objetivo EcoIndex: menos de 38 peticiones. -->
 <script src="motor-cuantico.js" defer></script>
-<script src="manolito-chat.js" defer></script>
-<script src="pdf-informe.js" defer></script>
-<script src="capa-fwi.js" defer></script>
-<script src="capa-recursos.js" defer></script>
-<script src="bandas-propagacion.js" defer></script>
-<script src="pwa-offline.js" defer></script>
-<script src="evacuacion.js" defer></script>
 </body>
 </html>
