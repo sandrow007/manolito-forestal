@@ -1,14 +1,20 @@
 /**
  * MANOLIT∞ FORESTAL - Worker principal
  * Enruta las peticiones a la API (Manolito, FIRMS, Señalización de
- * emergencia) y deja pasar todo lo demás al servidor de archivos
- * estáticos (carpeta "dist", binding ASSETS).
+ * emergencia y los proxies de APIs externas) y deja pasar todo lo demás
+ * al servidor de archivos estáticos (carpeta "public", binding ASSETS).
  */
 
 import { handleManolitoPost, handleManolitoOptions } from './manolito.js';
 import { handleGetFires } from './getFires.js';
 import { handleSenalPost, handleSenalGet, handleSenalOptions } from './senales.js';
-import { handleReverseGeocode } from './geocode.js';
+import {
+  handleReverse,
+  handleTerreno,
+  handleRecursos,
+  handleWeather,
+  handleElevation
+} from './externos.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -24,11 +30,6 @@ export default {
       return handleGetFires(request, env);
     }
 
-    if (url.pathname === '/reverse') {
-      if (request.method === 'GET') return handleReverseGeocode(request, env, ctx);
-      return new Response('Method Not Allowed', { status: 405 });
-    }
-
     if (url.pathname === '/senal') {
       if (request.method === 'POST') return handleSenalPost(request, env);
       if (request.method === 'GET') return handleSenalGet(request, env);
@@ -36,7 +37,17 @@ export default {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // Cualquier otra ruta: servir los archivos estáticos de "dist"
+    // Proxies de APIs externas (mismo origen; nunca devuelven error HTTP al
+    // navegador: fallan con 200 + {"error":...} para mantener la consola limpia).
+    if (request.method === 'GET') {
+      if (url.pathname === '/reverse') return handleReverse(request, env, ctx);
+      if (url.pathname === '/terreno') return handleTerreno(request, env, ctx);
+      if (url.pathname === '/recursos') return handleRecursos(request, env, ctx);
+      if (url.pathname === '/weather') return handleWeather(request, env, ctx);
+      if (url.pathname === '/elevation') return handleElevation(request, env, ctx);
+    }
+
+    // Cualquier otra ruta: servir los archivos estáticos de "public"
     return env.ASSETS.fetch(request);
   }
 };

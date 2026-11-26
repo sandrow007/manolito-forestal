@@ -41,7 +41,7 @@ const TILE_HOSTS = [
 ];
 
 // Rutas del propio worker que sirven datos (network-first).
-const RUTAS_DATOS = ['/getFires', '/senal', '/reverse'];
+const RUTAS_DATOS = ['/getFires', '/senal', '/reverse', '/terreno', '/recursos', '/weather', '/elevation'];
 
 const MAX_TILES_PRECARGA = 500;   // tope de seguridad anti-descargas masivas
 const TTL_TILES_MS = 30 * 24 * 3600 * 1000; // 30 días: los tiles caducan

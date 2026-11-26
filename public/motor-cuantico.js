@@ -2571,9 +2571,10 @@ async function estimarPendiente(lat, lon, azimutDeg) {
         const dLon = 100 / (111320 * Math.cos(lat * Math.PI / 180));
         const lats = [lat, lat + dLat, lat - dLat, lat, lat].join(',');
         const lons = [lon, lon, lon, lon + dLon, lon - dLon].join(',');
-        const resp = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`);
+        const resp = await fetch(`/elevation?lats=${lats}&lons=${lons}`);
         if (!resp.ok) return null;
         const data = await resp.json();
+        if (data.error) return null;
         const e = data.elevation;
         if (!e || e.length < 5) return null;
         // Gradiente hacia el norte y hacia el este (m / 100 m)
@@ -3418,34 +3419,10 @@ function recalcularCienciaFuego() {
     }
 }
 
-// 6a. OVERPASS CON RESPALDO (varios espejos + timeout)
-const OVERPASS_MIRRORS = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter'
-];
-
-async function consultarOverpass(query, timeoutMs = 8000) {
-    for (const url of OVERPASS_MIRRORS) {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-            const resp = await fetch(url, {
-                method: 'POST',
-                body: 'data=' + encodeURIComponent(query),
-                signal: controller.signal
-            });
-            clearTimeout(timer);
-            if (resp.ok) return await resp.json();
-            console.warn(`[Overpass] ${url} respondió ${resp.status}, probando siguiente espejo`);
-        } catch (e) {
-            clearTimeout(timer);
-            console.warn(`[Overpass] Fallo en ${url}:`, e.message, '— probando siguiente espejo');
-        }
-    }
-    console.error('[Overpass] Todos los espejos fallaron.');
-    return null;
-}
+// 6a. CONTEXTO DE TERRENO vía el Worker (/terreno): la consulta Overpass
+// se hace servidor-a-servidor (mismo origen: imposible que aparezcan errores
+// CORS en consola) y con caché en el edge. Si falla, el Worker responde
+// {"error":...} y la app degrada en silencio.
 
 // 6b. CONTEXTO AMPLIADO: vegetación y agua cercana
 // Además de nombres de especies, ahora también devuelve la CUBIERTA
@@ -3453,25 +3430,12 @@ async function consultarOverpass(query, timeoutMs = 8000) {
 // científico (motor-fuego-cientifico.js) usa para elegir el modelo de
 // combustible de Anderson con el que calcula la propagación real.
 async function obtenerContextoTerreno(lat, lon) {
-    const radioMetros = 3000;
-    const query = `
-        [out:json][timeout:10];
-        (
-          nwr["natural"="wood"](around:${radioMetros},${lat},${lon});
-          nwr["landuse"="forest"](around:${radioMetros},${lat},${lon});
-          nwr["natural"="scrub"](around:${radioMetros},${lat},${lon});
-          nwr["natural"="heath"](around:${radioMetros},${lat},${lon});
-          nwr["natural"="grassland"](around:${radioMetros},${lat},${lon});
-          nwr["landuse"="meadow"](around:${radioMetros},${lat},${lon});
-          nwr["natural"="water"](around:${radioMetros},${lat},${lon});
-          nwr["waterway"="river"](around:${radioMetros},${lat},${lon});
-          nwr["landuse"="reservoir"](around:${radioMetros},${lat},${lon});
-        );
-        out tags 10;
-    `;
-
-    const data = await consultarOverpass(query);
-    if (!data) {
+    let data = null;
+    try {
+        const resp = await fetch(`/terreno?lat=${lat}&lon=${lon}`);
+        data = await resp.json();
+    } catch (e) { data = null; }
+    if (!data || data.error) {
         return { vegetacion: 'No disponible (fallo de consulta a OpenStreetMap)', aguaCercana: null, tipoCubierta: null };
     }
 
@@ -3521,10 +3485,8 @@ async function fetchConReintentos(url, intentos = 3, timeoutMs = 6000) {
             const resp = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
             if (resp.ok) return resp;
-            console.warn(`[Clima] Intento ${i + 1} respondió ${resp.status}`);
         } catch (e) {
             clearTimeout(timer);
-            console.warn(`[Clima] Intento ${i + 1} falló:`, e.message);
         }
         if (i < intentos - 1) await new Promise(r => setTimeout(r, 600));
     }
@@ -3541,9 +3503,9 @@ async function obtenerDatosClimaticos(lat, lon) {
     DOM.uiPercent.textContent = t('calculando');
     DOM.dashboard.classList.remove('estado-reposo', 'estado-ambar', 'estado-rojo');
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,soil_moisture_0_to_1cm,is_day&daily=precipitation_sum&timezone=auto`;
-
-    const resp = await fetchConReintentos(url, 3, 6000);
+    // Mismo origen: el Worker (/weather) consulta Open-Meteo servidor-a-
+    // servidor; nunca llega un error HTTP al navegador.
+    const resp = await fetchConReintentos(`/weather?lat=${lat}&lon=${lon}`, 3, 6000);
 
     if (!resp) {
         DOM.uiPercent.textContent = 'Error';
@@ -3555,6 +3517,8 @@ async function obtenerDatosClimaticos(lat, lon) {
 
     try {
         const data = await resp.json();
+
+        if (data.error) throw new Error('meteo no disponible');
 
         if (data.elevation <= 0) {
             DOM.uiAlert.textContent = t('zonaAgua');
@@ -3616,7 +3580,6 @@ async function obtenerDatosClimaticos(lat, lon) {
 
         ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, null, humedadSuelo, esDia, lluviaHoy);
     } catch (error) {
-        console.error('[Clima] Error procesando respuesta:', error);
         DOM.uiPercent.textContent = 'Error';
         DOM.uiAlert.textContent = t('errorDatosClima');
         if (DOM.uiAlert) DOM.uiAlert.dataset.estado = 'error';
@@ -4161,6 +4124,7 @@ async function obtenerNombreLugar(lat, lon) {
         const resp = await fetch(`/reverse?lat=${lat}&lon=${lon}`);
         if (!resp.ok) return null;
         const data = await resp.json();
+        if (data.error) return null;
         const addr = data.address || {};
         const partes = [
             addr.village || addr.town || addr.city || addr.municipality || addr.hamlet,
@@ -4725,7 +4689,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ================= CONFIGURACIÓN ================= */
 
-    var OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
     var DEBOUNCE_MS = 800;
     var MAX_LADO_GRADOS = 0.5;      // si el bbox supera 0.5° de lado, pedimos zoom
     var CACHE_PREFIX = 'mf-recursos:';
@@ -4877,17 +4840,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { /* sessionStorage lleno: seguimos sin caché */ }
     }
 
-    function construirQuery(b) {
-        var bboxStr = b.south + ',' + b.west + ',' + b.north + ',' + b.east;
-        var partes = [];
-        Object.keys(TIPOS).forEach(function (k) {
-            TIPOS[k].overpass.forEach(function (frag) {
-                partes.push(frag.split('{{bbox}}').join(bboxStr));
-            });
-        });
-        return '[out:json][timeout:25];(' + partes.join('') + ');out center;';
-    }
-
     function clasificar(tags) {
         if (!tags) return null;
         if (tags.emergency === 'fire_hydrant') return 'hidrante';
@@ -4939,20 +4891,12 @@ document.addEventListener('DOMContentLoaded', () => {
         consultaEnCurso = true;
         mostrarEstado('cargando');
 
-        fetch(OVERPASS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'data=' + encodeURIComponent(construirQuery(b))
-        })
-            .then(function (res) {
-                if (res.status === 429 || res.status === 504) {
-                    // Rate limit / gateway saturado: avisar y NO reintentar en bucle.
-                    throw new Error('saturado');
-                }
-                if (!res.ok) throw new Error('http_' + res.status);
-                return res.json();
-            })
+        // Mismo origen: el Worker (/recursos) consulta Overpass con espejos
+        // de respaldo y caché; nunca devuelve un error HTTP al navegador.
+        fetch('/recursos?sur=' + b.south + '&oeste=' + b.west + '&norte=' + b.north + '&este=' + b.east)
+            .then(function (res) { return res.json(); })
             .then(function (json) {
+                if (!json || json.error) { mostrarEstado('red'); return; }
                 var lista = (json.elements || []).map(normalizar).filter(Boolean);
                 elementos = lista;
                 haSidoConsultado = true;
@@ -4960,9 +4904,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 pintarMarcadores();
                 mostrarEstado('ok');
             })
-            .catch(function (err) {
-                if (err && err.message === 'saturado') mostrarEstado('saturado');
-                else mostrarEstado('red');
+            .catch(function () {
+                mostrarEstado('red');
             })
             .finally(function () {
                 consultaEnCurso = false;
@@ -5555,16 +5498,16 @@ window.addEventListener('manolitoforestal:mapa-listo', function (e) {
     capturarMapa(e && e.detail);
 });
 
-// Retry loop: DOM + mapa (máx 40 intentos x 250 ms = 10 s)
+// Retry loop: DOM + mapa (máx 40 intentos x 250 ms = 10 s). Se acepta el
+// mapa por cualquiera de las vías públicas: MANOLITO_MAPA (integrador),
+// manolitoMapa (lo expone el propio motor en window) o window.map.
 let intentosMapa = 0;
 const reintento = setInterval(function () {
     intentosMapa++;
-    if (!mapa && window.MANOLITO_MAPA) capturarMapa(window.MANOLITO_MAPA);
+    if (!mapa) capturarMapa(window.MANOLITO_MAPA || window.manolitoMapa || window.map);
     if (mapa || intentosMapa >= 40) {
-        if (mapa || intentosMapa >= 40) clearInterval(reintento);
+        clearInterval(reintento);
         if (mapa) asegurarBoton();
-        else console.warn('[bandas-propagacion] No se encontró el mapa Leaflet. ' +
-            'Expón window.MANOLITO_MAPA o carga este script antes de motor-cuantico.js.');
     }
 }, 250);
 
