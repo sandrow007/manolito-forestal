@@ -33,6 +33,11 @@
 
     * { box-sizing: border-box; }
 
+    /* Sin barras de scroll visibles EN NINGÚN SITIO (dashboard, chat,
+       modales, avisos...). El scroll táctil/de rueda sigue funcionando. */
+    * { scrollbar-width: none; -ms-overflow-style: none; }
+    *::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
     html, body {
         margin: 0; padding: 0; height: 100%;
         background: var(--bg);
@@ -246,11 +251,17 @@
     }
     #legal-modal .legal-box {
         background: #0c1119; border: 1px solid var(--panel-border); border-radius: 16px;
-        width: min(640px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
+        width: min(640px, 92vw); max-height: 94vh; display: flex; flex-direction: column;
         box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.5);
     }
     .legal-box-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--panel-border); }
-    #legal-content-container { padding: 18px 20px; overflow-y: auto; overflow-x: hidden; font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); overflow-wrap: break-word; word-break: break-word; max-width: 100%; }
+    #legal-content-container {
+        padding: 18px 20px; overflow-y: auto; overflow-x: hidden;
+        font-size: 0.85rem; line-height: 1.6; color: var(--text-muted);
+        overflow-wrap: break-word; word-break: break-word; max-width: 100%;
+        scrollbar-width: none; -ms-overflow-style: none; /* sin barra fea */
+    }
+    #legal-content-container::-webkit-scrollbar { width: 0; height: 0; display: none; }
     #legal-content-container * { max-width: 100%; }
     #legal-content-container ul { padding-left: 18px; }
     #legal-content-container h2 { color: var(--text); font-size: 1.1rem; }

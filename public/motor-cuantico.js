@@ -2722,9 +2722,11 @@ function debounce(func, wait) {
 }
 
 // 1. INICIALIZACIÓN DEL MAPA
+// Vista global al abrir: se ven de un vistazo los incendios activos del
+// planeta (FIRMS "world"); el usuario acerca después a su zona.
 const map = L.map('map', {
-    center: [40.0, -3.0],
-    zoom: 6,
+    center: [38.0, -5.0],
+    zoom: 3,
     zoomControl: true
 });
 // Hook público para los módulos de capas (FWI, recursos, PWA offline)
@@ -3842,13 +3844,28 @@ function dibujarPerimetrosActivos(puntos) {
 }
 
 // 7b. PROCESADOR DE DATOS DE INCENDIOS
-function procesarCsvFuegos(csv) {
+// filtroBounds (opcional): en vista global solo se pintan los puntos que
+// caen dentro del viewport con margen; el snapshot mundial puede traer
+// varios miles de detecciones y pintarlas todas colapsaría el navegador.
+function procesarCsvFuegos(csv, filtroBounds = null) {
     grupoFuegos.clearLayers();
     const lineas = csv.trim().split('\n');
     if (lineas.length <= 1) {
         DOM.contadorFuegos.textContent = t('ceroFuegosVisibles');
         grupoPerimetroFuegos.clearLayers();
         return 0;
+    }
+
+    let pad = null;
+    if (filtroBounds) {
+        const margenLat = (filtroBounds.getNorth() - filtroBounds.getSouth()) * 0.5;
+        const margenLon = (filtroBounds.getEast() - filtroBounds.getWest()) * 0.5;
+        pad = {
+            sur: filtroBounds.getSouth() - margenLat,
+            norte: filtroBounds.getNorth() + margenLat,
+            oeste: filtroBounds.getWest() - margenLon,
+            este: filtroBounds.getEast() + margenLon
+        };
     }
 
     let contador = 0;
@@ -3861,6 +3878,7 @@ function procesarCsvFuegos(csv) {
         const confianza = cols[9];
 
         if (isNaN(lat) || isNaN(lon)) continue;
+        if (pad && (lat < pad.sur || lat > pad.norte || lon < pad.oeste || lon > pad.este)) continue;
 
         const color = confianza === 'h' ? '#ff4500' : (confianza === 'n' ? '#ffaa00' : '#ff0000');
         // Marcador en forma de llama (SVG, no cuadrado ni emoji): fiel a
@@ -3907,14 +3925,19 @@ async function cargarFuegosActivos() {
         const norte = bounds.getNorth();
         const este = bounds.getEast();
 
-        const boundsParam = `${oeste},${sur},${este},${norte}`;
+        // Vista amplia (zoom inicial global o continente entero): FIRMS
+        // limita el tamaño del bounding box del endpoint "area", así que se
+        // pide el snapshot mundial del último día y se filtra en cliente.
+        const anchoGrados = este - oeste;
+        const vistaGlobal = map.getZoom() <= 3 || anchoGrados > 75;
+        const boundsParam = vistaGlobal ? 'world' : `${oeste},${sur},${este},${norte}`;
         const url = `/getFires?bounds=${boundsParam}`;
 
         const resp = await fetch(url);
         if (!resp.ok) throw new Error("FIRMS no respondió");
         const csv = await resp.text();
 
-        const contador = procesarCsvFuegos(csv);
+        const contador = procesarCsvFuegos(csv, vistaGlobal ? bounds : null);
 
         if (contador > 0) {
             DOM.contadorFuegos.textContent = t('fuegosActivosDetectados', { count: contador });
@@ -5787,17 +5810,16 @@ window.bandasPropagacion = api;
         // línea, naranja = sin conexión) y un punto CSS refuerza el texto.
         const punto = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:7px;vertical-align:1px"></span>';
         if (enLinea) {
-            badge.innerHTML = punto;
-            badge.appendChild(document.createTextNode(tt('pwa.online')));
-            badge.style.background = '#00f3ff';
-            // En línea: visible un momento y luego se atenúa para no estorbar.
-            badge.style.opacity = '0.35';
-        } else {
-            badge.innerHTML = punto;
-            badge.appendChild(document.createTextNode(tt('pwa.offline')));
-            badge.style.background = '#ff9f43';
-            badge.style.opacity = '1';
+            // En línea: no se muestra nada. La ausencia de aviso YA es el
+            // estado "todo bien"; el badge solo existe para el modo campo.
+            badge.style.display = 'none';
+            return;
         }
+        badge.style.display = '';
+        badge.innerHTML = punto;
+        badge.appendChild(document.createTextNode(tt('pwa.offline')));
+        badge.style.background = '#ff9f43';
+        badge.style.opacity = '1';
         // Botón ✕ para cerrar el aviso (el badge tiene pointer-events:none,
         // así que el ✕ los reactiva solo para sí mismo).
         var btnX = document.createElement('button');
