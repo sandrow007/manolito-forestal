@@ -50,7 +50,7 @@ const IDIOMAS = {
         popupConfianza: "Confianza",
         popupEvaluarRiesgo: "Evaluar riesgo cuántico",
         tooltipPropagacion: "Zona estimada de propagación (según viento actual)",
-        popupEstresBiomasa: "Estrés de Biomasa",
+        popupEstresBiomasa: "Peligro (FWI)",
         actionOptimo: "Biomasa en estado óptimo. Continúa con la vigilancia periódica de la zona.",
         actionRecomendada: "<strong>ACCIÓN RECOMENDADA:</strong> Solicita a los servicios forestales la revisión y limpieza preventiva de esta franja, priorizando cabeza y flancos según el viento.",
         actionUrgente: "<strong>ACCIÓN URGENTE:</strong> Notifica a bomberos/servicios forestales. Consulta el apartado de Propagación para las zonas prioritarias de trabajo.",
@@ -80,7 +80,7 @@ const IDIOMAS = {
         pdfSinConfirmar: "sin incendio confirmado, zona bajo vigilancia",
         pdfFecha: "Fecha del informe", pdfLugar: "Lugar aproximado", pdfNoDisponible: "No disponible",
         pdfCoordenadas: "Coordenadas", pdfTemperatura: "Temperatura", pdfHumedad: "Humedad relativa",
-        pdfViento: "Viento", pdfDireccionLower: "dirección", pdfEstresBiomasa: "Estrés de biomasa (modelo cuántico)",
+        pdfViento: "Viento", pdfDireccionLower: "dirección", pdfEstresBiomasa: "Índice FWI (estándar EFFIS)",
         pdfIncendiosCercanos: "Incendios activos en 25km (satélite)", pdfMasCercano: "el más cercano a",
         pdfNingunoDetectado: "ninguno detectado", pdfPerimetroIncendio: "Perímetro estimado de incendio",
         pdfDentroPerimetroCorto: "dentro del perímetro", pdfFocoDe: "foco de",
@@ -530,7 +530,7 @@ const IDIOMAS = {
         popupConfianza: "Confianza",
         popupEvaluarRiesgo: "Avaliar risco cuántico",
         tooltipPropagacion: "Zona estimada de propagación (segundo o vento actual)",
-        popupEstresBiomasa: "Estrés de Biomasa",
+        popupEstresBiomasa: "Peligro (FWI)",
         actionOptimo: "Biomasa en estado óptimo. Continúe coa vixilancia periódica da zona.",
         actionRecomendada: "<strong>ACCIÓN RECOMENDADA:</strong> Solicite aos servizos forestais a revisión e limpeza preventiva desta franxa, priorizando cabeza e flancos segundo o vento.",
         actionUrgente: "<strong>ACCIÓN URXENTE:</strong> Notifique a bombeiros/servizos forestais. Consulte o apartado de Propagación para as zonas prioritarias de traballo.",
@@ -560,7 +560,7 @@ const IDIOMAS = {
         pdfSinConfirmar: "sen incendio confirmado, zona baixo vixilancia",
         pdfFecha: "Data do informe", pdfLugar: "Lugar aproximado", pdfNoDisponible: "Non dispoñible",
         pdfCoordenadas: "Coordenadas", pdfTemperatura: "Temperatura", pdfHumedad: "Humidade relativa",
-        pdfViento: "Vento", pdfDireccionLower: "dirección", pdfEstresBiomasa: "Estrés de biomasa (modelo cuántico)",
+        pdfViento: "Vento", pdfDireccionLower: "dirección", pdfEstresBiomasa: "Índice FWI (estándar EFFIS)",
         pdfIncendiosCercanos: "Lumes activos en 25km (satélite)", pdfMasCercano: "o máis próximo a",
         pdfNingunoDetectado: "ningún detectado", pdfPerimetroIncendio: "Perímetro estimado de incendio",
         pdfDentroPerimetroCorto: "dentro do perímetro", pdfFocoDe: "foco de",
@@ -2731,10 +2731,11 @@ const map = L.map('map', {
 window.manolitoMapa = map;
 
 // Capas base
-const baseDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CartoDB',
-    subdomains: 'abcd',
-    maxZoom: 20
+// CartoDB ya exige API key en 2025 (los tiles muestran "api key required").
+// Alternativa oscura GRATIS y sin clave: Esri "Dark Gray Base" (Canvas).
+const baseDark = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri, Garmin, GEBCO, NOAA, USGS © OpenStreetMap contributors',
+    maxZoom: 19
 });
 
 const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -2996,6 +2997,122 @@ function normalizarVariables(temp, hum, wind) {
     return { pTemp, pHum, pWind };
 }
 
+// 3a-bis. ÍNDICE FWI OFICIAL (Van Wagner, CFS Canadá — estándar EFFIS/AEMET)
+// Implementa la cadena completa de subíndices con las ecuaciones publicadas:
+//   FFMC (humedad del combustible fino) -> ISI (velocidad de propagación inicial)
+//   DMC + DC (combustible pesado acumulado) -> BUI -> FWI
+// Salida normalizada a 0-100 con la correspondencia oficial EFFIS:
+//   FWI 0-5 muy bajo, 5-11 bajo, 11-21 moderado, 21-38 alto, 38-66 muy alto, >66 extremo
+// Nota: con un único día de observación se parte de los valores estándar de
+// inicio de temporada (FFMC 85, DMC 6, DC 15), como hace el CFS en su calculadora.
+function calcularFWIOficial(tempC, humPct, windKmh, lluviaMm, mes) {
+    // Ecuaciones oficiales Van Wagner & Pickett (1985), tal como están
+    // implementadas en el paquete canadiense cffdrs (CFS/NRCan).
+    const T = tempC, H = humPct, W = windKmh, P = Math.max(0, lluviaMm || 0);
+    const mon = (typeof mes === 'number' ? mes : new Date().getMonth()) + 1; // 1-12
+    const ln = Math.log, exp = Math.exp, pow = Math.pow, sqrt = Math.sqrt;
+    const FFCOEF = 250.0 * 59.5 / 101.0; // coef. de conversión FFMC ↔ humedad
+
+    // ---- DMC (combustible de ~2,5 cm; tabla de longitud de día 46N, válida p. ej. para España) ----
+    const LeTabla = [6.5, 7.5, 9, 12.8, 13.9, 13.9, 12.4, 10.9, 9.4, 8, 7, 6];
+    const Le = LeTabla[mon - 1];
+    const Tdmc = Math.max(-1.1, T);
+    const rk = 1.894 * (Tdmc + 1.1) * (100 - H) * Le * 1e-04; // Eq. 16
+    let dmc;
+    if (P <= 1.5) {
+        dmc = 6 + rk;
+    } else {
+        const rw = 0.92 * P - 1.27;                       // Eq. 11
+        const wmi = 20 + 280 / exp(0.023 * 6);            // Eq. 12
+        const b = 6 <= 33 ? 100 / (0.5 + 0.3 * 6) : 6 <= 65 ? 14 - 1.3 * ln(6) : 6.2 * ln(6) - 17.2;
+        const wmr = wmi + 1000 * rw / (48.77 + b * rw);   // Eq. 14
+        const pr = 43.43 * (5.6348 - ln(wmr - 20));       // Eq. 15
+        dmc = Math.max(0, pr) + rk;
+    }
+    dmc = Math.max(0, dmc);
+
+    // ---- DC (sequía, capa orgánica profunda) ----
+    const Tcdc = Math.max(-2.8, T);
+    const LfTabla = [-1.6, -1.6, -1.6, 0.9, 3.8, 5.8, 6.4, 5, 2.4, 0.4, -1.6, -1.6];
+    const Lf = LfTabla[mon - 1];
+    let pe = (0.36 * (Tcdc + 2.8) + Lf) / 2;              // Eq. 22
+    pe = Math.max(0, pe);
+    let dc;
+    if (P <= 2.8) {
+        dc = 15 + pe;
+    } else {
+        const rw = 0.83 * P - 1.27;                       // Eq. 18
+        const smi = 800 * exp(-15 / 400);                 // Eq. 19
+        const dr0 = Math.max(0, 15 - 400 * ln(1 + 3.937 * rw / smi)); // Eq. 21
+        dc = dr0 + pe;
+    }
+    dc = Math.max(0, dc);
+
+    // ---- FFMC (combustible fino superficial) ----
+    let wmo = FFCOEF * (101 - 85) / (59.5 + 85);          // Eq. 1 (desde FFMC 85)
+    if (P > 0.5) {
+        const ra = P - 0.5;                               // Eq. 2
+        wmo = wmo > 150
+            ? wmo + 0.0015 * (wmo - 150) * (wmo - 150) * sqrt(ra)
+                + 42.5 * ra * exp(-100 / (251 - wmo)) * (1 - exp(-6.93 / ra))
+            : wmo + 42.5 * ra * exp(-100 / (251 - wmo)) * (1 - exp(-6.93 / ra)); // Eqs. 3a/3b
+    }
+    wmo = Math.min(250, wmo);
+    const ed = 0.942 * pow(H, 0.679) + 11 * exp((H - 100) / 10) + 0.18 * (21.1 - T) * (1 - 1 / exp(H * 0.115)); // Eq. 4
+    const ew = 0.618 * pow(H, 0.753) + 10 * exp((H - 100) / 10) + 0.18 * (21.1 - T) * (1 - 1 / exp(H * 0.115)); // Eq. 5
+    let wm;
+    if (wmo < ed && wmo < ew) {
+        // humectación (el combustible gana humedad): Eq. 6a/6b/8
+        const z = 0.424 * (1 - pow((100 - H) / 100, 1.7)) + 0.0694 * sqrt(W) * (1 - pow((100 - H) / 100, 8));
+        wm = ew - (ew - wmo) / pow(10, z * 0.581 * exp(0.0365 * T));
+    } else if (wmo > ed) {
+        // secado: Eq. 7a/7b/9
+        const z = 0.424 * (1 - pow(H / 100, 1.7)) + 0.0694 * sqrt(W) * (1 - pow(H / 100, 8));
+        wm = ed + (wmo - ed) / pow(10, z * 0.581 * exp(0.0365 * T));
+    } else {
+        wm = wmo;
+    }
+    const ffmc = Math.min(101, Math.max(0, 59.5 * (250 - wm) / (FFCOEF + wm)));   // Eq. 10
+
+    // ---- ISI (velocidad de propagación inicial) ----
+    const fm = FFCOEF * (101 - ffmc) / (59.5 + ffmc);     // Eq. 10 invertida
+    const fW = exp(0.05039 * W);                          // Eq. 24
+    const fF = 91.9 * exp(-0.1386 * fm) * (1 + pow(fm, 5.31) / 49300000); // Eq. 25
+    const isi = 0.208 * fW * fF;                          // Eq. 26
+
+    // ---- BUI (acumulación de combustible pesado) ----
+    let bui;
+    const bui1 = (dmc === 0 && dc === 0) ? 0 : 0.8 * dc * dmc / (dmc + 0.4 * dc);   // Eq. 27a
+    if (bui1 < dmc) {
+        const p = dmc === 0 ? 0 : (dmc - bui1) / dmc;
+        const cc = 0.92 + pow(0.0114 * dmc, 1.7);
+        bui = Math.max(0, dmc - cc * p);                  // Eq. 27b
+    } else {
+        bui = bui1;
+    }
+
+    // ---- FWI (índice integrado oficial) ----
+    const bb = bui > 80
+        ? 0.1 * isi * (1000 / (25 + 108.64 / exp(0.023 * bui)))   // Eq. 28b
+        : 0.1 * isi * (0.626 * pow(bui, 0.809) + 2);              // Eq. 28a
+    const fwi = bb <= 1 ? bb : exp(2.72 * pow(0.434 * ln(bb), 0.647)); // Eqs. 29, 30a/30b
+
+    // Normalización 0-100 sobre la escala EFFIS de peligro:
+    // FWI 0-5 muy bajo · 5-11 bajo · 11-21 moderado · 21-38 alto · 38-66 muy alto · >66 extremo
+    const pct = Math.max(0, Math.min(100, Math.round(fwi / 75 * 100)));
+
+    return { fwi: Math.round(fwi * 10) / 10, pct, isi: Math.round(isi * 10) / 10, bui: Math.round(bui), ffmc: Math.round(ffmc), dmc: Math.round(dmc * 10) / 10, dc: Math.round(dc) };
+}
+
+function nivelFWI(fwi) {
+    if (fwi < 5) return 'muy bajo';
+    if (fwi < 11) return 'bajo';
+    if (fwi < 21) return 'moderado';
+    if (fwi < 38) return 'alto';
+    if (fwi < 66) return 'muy alto';
+    return 'extremo';
+}
+
 // 3b. UTILIDADES DE VIENTO Y PROPAGACIÓN
 function gradosACardinal(deg) {
     const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -3096,9 +3213,16 @@ function dibujarPropagacion(lat, lon, windDirOrigen, windSpeed, colorHex) {
     }).addTo(map);
 }
 
-// 4. EJECUCIÓN DEL MOTOR CUÁNTICO
-function ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, lugar, humedadSuelo, esDia) {
+// 4. EJECUCIÓN DEL MOTOR DE PELIGRO
+// El porcentaje oficial que se muestra viene del ÍNDICE FWI canadiense
+// (Van Wagner, estándar EFFIS/AEMET) calculado con las ecuaciones completas
+// (FFMC/ISI/DMC/DC/BUI). El circuito cuántico de 3 qubits se conserva como
+// visualización complementaria del registro técnico, no como fuente del riesgo.
+function ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, lugar, humedadSuelo, esDia, lluvia = 0) {
     const { pTemp, pHum, pWind } = normalizarVariables(temp, hum, wind);
+
+    const fwi = calcularFWIOficial(temp, hum, wind, lluvia);
+    const porcentajePeligro = fwi.pct;
 
     const thetaQ0 = 2 * Math.asin(Math.sqrt(pTemp));
     const thetaQ1 = 2 * Math.asin(Math.sqrt(pHum));
@@ -3110,24 +3234,25 @@ function ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, lugar, humeda
     sim.aplicarRY(2, thetaQ2);
 
     DOM.logRY.innerHTML =
-        `${t('logRyAplicadas')}<br> Q0(Temp): ${thetaQ0.toFixed(3)} rad<br> Q1(Hum): ${thetaQ1.toFixed(3)} rad<br> Q2(Wind): ${thetaQ2.toFixed(3)} rad`;
+        `> Índice FWI oficial (Van Wagner): <b>${fwi.fwi}</b> (${nivelFWI(fwi.fwi)})<br>` +
+        `> Subíndices: FFMC ${fwi.ffmc} · ISI ${fwi.isi} · BUI ${fwi.bui} · DC ${fwi.dc} · lluvia hoy ${lluvia.toFixed(1)} mm<br>` +
+        `> Visualización cuántica (3 qubits):<br> Q0(Temp): ${thetaQ0.toFixed(3)} rad · Q1(Hum): ${thetaQ1.toFixed(3)} rad · Q2(Wind): ${thetaQ2.toFixed(3)} rad`;
 
     sim.aplicarCNOT(0, 2);
     sim.aplicarCNOT(2, 1);
     DOM.logCNOT.textContent = t('logCnotEjecutados');
 
-    const porcentajePeligro = sim.medirRiesgoIgnicion();
     const detalles = sim.obtenerDetalles();
 
     DOM.logMedicion.textContent = t('logMedicionEjecutada');
     DOM.logDetalles.innerHTML =
         `P(|011⟩) = ${detalles[3]}%<br>P(|101⟩) = ${detalles[5]}%<br>P(|110⟩) = ${detalles[6]}%<br>P(|111⟩) = ${detalles[7]}%`;
 
-    actualizarInterfazYMapa(lat, lon, porcentajePeligro, temp, hum, wind, windDir, lugar, humedadSuelo, esDia);
+    actualizarInterfazYMapa(lat, lon, porcentajePeligro, temp, hum, wind, windDir, lugar, humedadSuelo, esDia, fwi);
 }
 
 // 5. ACTUALIZACIÓN VISUAL
-function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar, humedadSuelo, esDia) {
+function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar, humedadSuelo, esDia, fwi) {
     DOM.uiPercent.textContent = `${pct}%`;
     DOM.dashboard.classList.remove('estado-reposo', 'estado-ambar', 'estado-rojo');
     DOM.uiAlert.dataset.estado = 'evaluado';
@@ -3218,6 +3343,7 @@ function actualizarInterfazYMapa(lat, lon, pct, temp, hum, wind, windDir, lugar,
         windDir: windDir,
         windDirCardinal: (typeof windDir === 'number') ? gradosACardinal(windDir) : null,
         pct,
+        fwi: fwi || null,
         lugar: lugar || null,
         humedadSuelo: (typeof humedadSuelo === 'number') ? humedadSuelo : null,
         esDia: (typeof esDia === 'boolean') ? esDia : null,
@@ -3263,6 +3389,9 @@ function recalcularCienciaFuego() {
     const s = c.ciencia;
     if (!s || !div) return;
     const lineas = [
+        `<b>Índice FWI oficial (Van Wagner, estándar EFFIS)</b>`,
+        c.fwi ? `▸ FWI: <b>${c.fwi.fwi}</b> (${nivelFWI(c.fwi.fwi)}) · normalizado al ${c.pct}% — umbral de colores: 40% ≈ FWI 30, 75% ≈ FWI 56` : '',
+        c.fwi ? `▸ Subíndices: FFMC ${c.fwi.ffmc} · ISI ${c.fwi.isi} · BUI ${c.fwi.bui}` : '',
         `<b>Análisis científico (Fosberg / Rothermel / Byram)</b>`,
         `▸ Peligro meteorológico FFWI: <b>${s.ffwi}</b> (${s.ffwiNivel})`,
         `▸ Humedad del combustible fino (1h): ${s.humedadCombustible1h}%`
@@ -3275,7 +3404,7 @@ function recalcularCienciaFuego() {
     if (s.escape) {
         lineas.push(`▸ Si prendiera aquí: avanzaría hacia el <b>${s.escape.cardAvance}</b>. Huida: perpendicular (${s.escape.cardFlancoA} o ${s.escape.cardFlancoB}) o hacia lo ya quemado (${s.escape.cardBarlovento}). Nunca hacia el ${s.escape.cardAvance}.`);
     }
-    div.innerHTML = lineas.join('<br>');
+    div.innerHTML = lineas.filter(Boolean).join('<br>');
 
     // Bandas de propagación t+2/6/12h (módulo opcional bandas-propagacion.js)
     if (window.bandasPropagacion && s && typeof s.rosMMin === 'number') {
@@ -3406,7 +3535,7 @@ async function obtenerDatosClimaticos(lat, lon) {
     DOM.uiPercent.textContent = t('calculando');
     DOM.dashboard.classList.remove('estado-reposo', 'estado-ambar', 'estado-rojo');
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,soil_moisture_0_to_1cm,is_day`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,soil_moisture_0_to_1cm,is_day&daily=precipitation_sum&timezone=auto`;
 
     const resp = await fetchConReintentos(url, 3, 6000);
 
@@ -3455,6 +3584,9 @@ async function obtenerDatosClimaticos(lat, lon) {
         const windDir = data.current.wind_direction_10m;
         const humedadSuelo = data.current.soil_moisture_0_to_1cm;
         const esDia = data.current.is_day === 1;
+        const lluviaHoy = (data.daily && Array.isArray(data.daily.precipitation_sum))
+            ? (data.daily.precipitation_sum[0] || 0)
+            : 0;
 
         DOM.uiTemp.textContent = `${temp} °C`;
         DOM.uiHum.textContent = `${hum} %`;
@@ -3476,7 +3608,7 @@ async function obtenerDatosClimaticos(lat, lon) {
             }
         }).catch(() => {});
 
-        ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, null, humedadSuelo, esDia);
+        ejecutarMotorCuantico(lat, lon, temp, hum, wind, windDir, null, humedadSuelo, esDia, lluviaHoy);
     } catch (error) {
         console.error('[Clima] Error procesando respuesta:', error);
         DOM.uiPercent.textContent = 'Error';
@@ -4105,7 +4237,7 @@ async function generarInformePDF(contexto) {
     linea('Temperatura', `${contexto.temp} °C`);
     linea('Humedad relativa', `${contexto.hum} %`);
     linea('Viento', `${contexto.wind} km/h, dirección ${contexto.windDir}° (${contexto.windDirCardinal || ''})`);
-    linea('Estrés de biomasa (modelo cuántico)', `${contexto.pct} %`, estado.color !== 'verde' ? estado.rgb : null);
+    linea('Índice FWI (estándar EFFIS)', `${contexto.pct} %`, estado.color !== 'verde' ? estado.rgb : null);
     if (contexto.incendiosActivosCercanos !== undefined && contexto.incendiosActivosCercanos !== null) {
         linea('Incendios activos en 25km (satélite)', contexto.incendiosActivosCercanos > 0
             ? `${contexto.incendiosActivosCercanos} (el más cercano a ${contexto.distanciaIncendioMasCercanoKm} km)`

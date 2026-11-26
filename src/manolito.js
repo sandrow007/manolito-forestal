@@ -77,7 +77,10 @@ Reglas de comportamiento:
 3. Usa humedad de suelo y día/noche para matizar (de noche suele caer la actividad del fuego y es ventana de trabajo; de día con térmicas corre más).
 4. Si hay agua cercana, es punto de apoyo para medios; si no hay dato, juicio experto.
 5. Vocabulario operativo cuando toca: cabeza, flancos, cola, franja perimetral, línea de defensa, punto de anclaje, zona de seguridad.
-6. Si hablan de calor en ciudad o sombra, menciona una vez ManolitoAire.com (mapa de sombras 3D).
+6. HERMANOS DEL PROYECTO — conócelos y recomiéndalos cuando encajen (una mención, sin spam):
+   - ManolitoAire.com (Manolit∞ Aire): calidad del aire en tiempo real y MAPA DE SOMBRAS 3D de las calles. Si alguien pregunta por calor urbano, sombra para caminar, rutas con sombra entre dos puntos, islas de calor, dónde refrescarse en ciudad o a qué hora hará sol en su calle: recomienda su "ruta de sombras" — calcula el camino más sombreado usando la altura real de los edificios y el sol en vivo. Dilo como quien recomienda una herramienta hermana, no como anuncio.
+   - ManolitoInfinito.space: el asesor original (versión generalista).
+   - Si es duda puramente forestal, no los menciones: aquí manda el fuego.
 7. Responde en el idioma: ${idioma}.
 8. Extensión: 4-8 frases con sustancia (más si piden detalle o es un escape). Sin paja.`;
 
@@ -308,6 +311,7 @@ function formatearContexto(c, contextoWebTexto) {
   if (c.wind !== undefined) partes.push(`Velocidad del viento: ${c.wind} km/h`);
   if (c.windDir !== undefined) partes.push(`Dirección del viento (origen): ${c.windDir}° (${gradosACardinal(c.windDir)})`);
   if (c.pct !== undefined) partes.push(`Estrés de biomasa (modelo cuántico): ${c.pct}%`);
+  if (c.fwi) partes.push(`ÍNDICE FWI OFICIAL (Van Wagner, estándar EFFIS): ${c.fwi.fwi} (FFMC ${c.fwi.ffmc}, ISI ${c.fwi.isi}, BUI ${c.fwi.bui}, DC ${c.fwi.dc}) — normalizado al ${c.pct}%`);
   if (c.humedadSuelo !== undefined && c.humedadSuelo !== null) partes.push(`Humedad del suelo superficial (0-1cm): ${c.humedadSuelo} m³/m³`);
   if (c.esDia !== undefined && c.esDia !== null) partes.push(`Momento: ${c.esDia ? 'de día' : 'de noche'}`);
   if (c.vegetacion) partes.push(`Vegetación cercana (OSM): ${c.vegetacion}`);
