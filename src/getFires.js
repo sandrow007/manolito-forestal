@@ -17,10 +17,10 @@ export async function handleGetFires(request, env) {
         return new Response('FIRMS_MAP_KEY no está configurada en el Worker (usa: npx wrangler secret put FIRMS_MAP_KEY)', { status: 500 });
     }
 
-    // Vista global: FIRMS ofrece un snapshot mundial del último día
-    // (endpoint "world"), ideal para el zoom inicial del mapa.
+    // Vista global: el Area API de FIRMS admite 'world' como bounding box
+    // (ver documentación oficial). Snapshot mundial del último día.
     if (bounds === 'world') {
-        const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/v2/viirs/csv/${mapKey}/VIIRS_SNPP_NRT/world/1`;
+        const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/VIIRS_SNPP_NRT/world/1`;
         return reenviarFirms(firmsUrl);
     }
 
