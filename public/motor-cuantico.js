@@ -6567,6 +6567,7 @@ window.bandasPropagacion = api;
     }
 
     async function iniciarEvacuacion() {
+        if (estado.evacuando) return; // guarda anti doble pulsación (botón + popup)
         if (!('geolocation' in navigator)) {
             pintarBanner(tt('evac.sinGps'), 'roja');
             return;
@@ -6855,7 +6856,10 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
         if (estado.azEscape !== null && elFlecha) {
             let objetivo;
             if (estado.heading !== null) {
-                objetivo = (estado.azEscape + MAGNETIC_DECLINATION_DEG - estado.heading + 360) % 360;
+                // El bearing es norte VERDADERO y el heading es norte
+                // MAGNÉTICO: magnético = verdadero − D (D<0 al oeste, p.ej.
+                // Andalucía −0.7°). Por eso se RESTA la declinación.
+                objetivo = (estado.azEscape - MAGNETIC_DECLINATION_DEG - estado.heading + 360) % 360;
             } else if (estado.gpsCourse !== null) {
                 objetivo = (estado.azEscape - estado.gpsCourse + 360) % 360;
             } else {
