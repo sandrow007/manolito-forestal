@@ -1,0 +1,6 @@
+# Archivos locales / del entorno (no se suben a GitHub)
+.vscode/
+.agent-coder/
+.wrangler/
+node_modules/
+.dev.vars
