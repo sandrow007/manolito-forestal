@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%0A%20%20%3Crect%20width=%22512%22%20height=%22512%22%20rx=%2296%22%20fill=%22%23070a10%22/%3E%0A%20%20%3Cpath%20fill=%22%23ff6b00%22%20d=%22M256%2072c44%2064%20104%20104%20104%20188%200%2060-46%20108-104%20108s-104-48-104-108c0-48%2026-78%2052-112%208%2026%2026%2044%2044%2052-10-60-2-102%208-128z%22/%3E%0A%20%20%3Cpath%20fill=%22%23ffd500%22%20d=%22M256%20210c22%2034%2052%2056%2052%20104%200%2034-24%2062-52%2062s-52-28-52-62c0-26%2014-44%2028-62%204%2016%2014%2026%2024%2030-6-34-2-58%200-72z%22/%3E%0A%3C/svg%3E">
 <meta name="theme-color" content="#070a10">
@@ -269,10 +269,53 @@
     #legal-content-container a { color: var(--cyan); }
     .legal-box-footer { padding: 14px 20px; border-top: 1px solid var(--panel-border); }
 
+    /* ---------- Móvil: bottom-sheet, dedos gordos, safe-areas ---------- */
     @media (max-width: 640px) {
-        #dashboard { width: calc(100vw - 24px); right: 12px; top: 12px; }
-        #manolito-panel { width: calc(100vw - 24px); right: 12px; }
-        #language-select-wrap { top: 12px; left: 54px; }
+        /* Sin zoom fantasma al tocar dos veces ni al enfocar inputs (iOS) */
+        body { touch-action: manipulation; }
+        input, select, textarea, button { font-size: 16px; }
+
+        /* Dashboard como hoja inferior: no tapa medio mapa */
+        #dashboard {
+            width: 100vw; right: 0; left: 0; top: auto; bottom: 0;
+            max-height: 62vh;
+            border-radius: 20px 20px 0 0;
+            padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+            border-left: none; border-right: none; border-bottom: none;
+        }
+        #dashboard.closed { transform: translateY(110%); }
+
+        #reopen-dashboard-btn {
+            right: 12px; top: auto;
+            bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+            padding: 12px 16px;
+        }
+
+        /* Botones con objetivo táctil >= 44px (Apple HIG / WCAG) */
+        .icon-btn { width: 44px; height: 44px; font-size: 1.1rem; }
+        .btn-primary { padding: 14px; font-size: 1rem; }
+        #toggle-mode { padding: 12px; font-size: 0.9rem; }
+
+        /* Chat: casi a pantalla completa, cómodo con teclado */
+        #manolito-panel {
+            width: calc(100vw - 16px); right: 8px; left: 8px;
+            bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+            height: min(60vh, 520px);
+        }
+        #manolito-toggle-btn {
+            bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+            right: 14px; width: 60px; height: 60px;
+        }
+        #manolito-input { padding: 12px; }
+
+        /* Selector de idioma bajo el zoom de Leaflet, con safe-area */
+        #language-select-wrap {
+            top: calc(12px + env(safe-area-inset-top, 0px)); left: 54px;
+        }
+        #language-select { padding: 10px 12px; font-size: 16px; }
+
+        /* El porcentaje respira mejor en pantallas pequeñas */
+        #ui-percent { font-size: 2rem; }
     }
 </style>
 <base target="_blank">

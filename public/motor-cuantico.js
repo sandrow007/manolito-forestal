@@ -3533,6 +3533,10 @@ async function fetchConReintentos(url, intentos = 3, timeoutMs = 6000) {
 
 // 6. OBTENCIÓN DE DATOS METEOROLÓGICOS (clic en mapa)
 async function obtenerDatosClimaticos(lat, lon) {
+    // Normalizar coordenadas: Leaflet puede entregar longitudes fuera de
+    // [-180, 180] al arrastrar el mapa más allá del antimeridiano.
+    lon = ((lon + 180) % 360 + 360) % 360 - 180;
+    lat = Math.max(-90, Math.min(90, lat));
     DOM.uiCoords.textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     DOM.uiPercent.textContent = t('calculando');
     DOM.dashboard.classList.remove('estado-reposo', 'estado-ambar', 'estado-rojo');
@@ -5776,8 +5780,32 @@ window.bandasPropagacion = api;
         }
         navigator.serviceWorker.register('sw.js').then(function (reg) {
             swRegistro = reg;
+            // Auto-actualización: en cuanto haya una versión nueva del SW
+            // instalada y lista, tomamos el control y recargamos UNA vez.
+            reg.addEventListener('updatefound', function () {
+                var nuevo = reg.installing;
+                if (!nuevo) return;
+                nuevo.addEventListener('statechange', function () {
+                    if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
+                        nuevo.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                });
+            });
+            // Comprobar actualizaciones al abrir y cada hora por si la
+            // pestaña queda abierta mucho tiempo.
+            reg.update().catch(function () {});
+            setInterval(function () { reg.update().catch(function () {}); }, 3600 * 1000);
         }).catch(function (e) {
             console.warn('[PWA] Fallo al registrar el SW:', e);
+        });
+
+        // Cuando el SW nuevo toma el control, recargar para servir el
+        // código nuevo (guard: solo una recarga por sesión).
+        var recargadoPorSW = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (recargadoPorSW) return;
+            recargadoPorSW = true;
+            location.reload();
         });
     }
 

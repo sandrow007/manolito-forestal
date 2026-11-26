@@ -25,7 +25,7 @@
 /* ================= CONFIGURACIÓN ================= */
 
 const CACHE_TILES  = 'manolito-tiles-v1';
-const CACHE_STATIC = 'manolito-static-v2';
+const CACHE_STATIC = 'manolito-static-v3';
 const CACHE_DATOS  = 'manolito-datos-v1';
 
 const CACHES_CONOCIDOS = [CACHE_TILES, CACHE_STATIC, CACHE_DATOS];
@@ -134,11 +134,32 @@ async function networkFirstDatos(request) {
     }
 }
 
+// HTML de navegación: network-first (actualizaciones inmediatas), caché offline.
+async function networkFirstHTML(request) {
+    const cache = await caches.open(CACHE_STATIC);
+    try {
+        const resp = await fetch(request);
+        if (resp && resp.ok) cache.put(request, resp.clone()).catch(() => {});
+        return resp;
+    } catch (e) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        throw e;
+    }
+}
+
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     if (request.method !== 'GET') return; // solo GET pasa por caché
 
     const url = new URL(request.url);
+
+    // Navegaciones (el propio HTML): network-first para que las
+    // actualizaciones lleguen al instante; caché como respaldo offline.
+    if (request.mode === 'navigate') {
+        event.respondWith(networkFirstHTML(request));
+        return;
+    }
 
     if (esTile(url)) {
         event.respondWith(cacheFirstTiles(request));
@@ -216,6 +237,11 @@ async function precargarZona(cliente, bbox, zoomMin, zoomMax) {
 self.addEventListener('message', (event) => {
     const data = event.data;
     if (!data || typeof data !== 'object') return;
+
+    if (data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+        return;
+    }
 
     if (data.type === 'PRECARGA_ZONA' && Array.isArray(data.bbox)) {
         const cliente = event.source;
