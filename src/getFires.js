@@ -2,7 +2,17 @@
  * MANOLIT∞ FORESTAL - Proxy seguro a NASA FIRMS
  * El frontend llama a /getFires?bounds=oeste,sur,este,norte (sin API key).
  * Este módulo añade la MAP_KEY desde el secret del Worker y reenvía el CSV.
+ *
+ * IMPORTANTE: NASA apagó Suomi-NPP (fuente VIIRS_SNPP_NRT) el 2-nov-2026.
+ * Ahora se consulta NOAA-20 → NOAA-21 → MODIS, en ese orden, hasta que una
+ * fuente devuelva datos. Si ninguna responde, se devuelve un CSV vacío con
+ * HTTP 200 (0 fuegos), nunca un error al navegador.
  */
+
+// Orden de preferencia: VIIRS NOAA-20 y NOAA-21 son los sucesores de Suomi-NPP.
+const FUENTES = ['VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT', 'MODIS_NRT'];
+
+const CABECERA_VACIA = 'latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight';
 
 export async function handleGetFires(request, env) {
     const url = new URL(request.url);
@@ -17,46 +27,50 @@ export async function handleGetFires(request, env) {
         return new Response('FIRMS_MAP_KEY no está configurada en el Worker (usa: npx wrangler secret put FIRMS_MAP_KEY)', { status: 500 });
     }
 
-    // Vista global: el Area API de FIRMS admite 'world' como bounding box
-    // (ver documentación oficial). Snapshot mundial del último día.
-    if (bounds === 'world') {
-        const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/VIIRS_SNPP_NRT/world/1`;
-        return reenviarFirms(firmsUrl);
+    const diasAtras = bounds === 'world' ? 1 : 3;
+
+    for (const fuente of FUENTES) {
+        const csv = await pedirCsv(mapKey, fuente, bounds, diasAtras);
+        if (csv) {
+            return new Response(csv, { headers: cabeceras() });
+        }
     }
 
-    const fuente = 'VIIRS_SNPP_NRT'; // satélite VIIRS, casi-tiempo-real
-    const diasAtras = 3;             // solo detecciones recientes
-    const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/${fuente}/${bounds}/${diasAtras}`;
-
-    return reenviarFirms(firmsUrl);
+    // Ninguna fuente devolvió datos: CSV vacío (solo cabecera) con HTTP 200
+    // para que el navegador muestre 0 fuegos sin error en consola.
+    return new Response(CABECERA_VACIA, { headers: cabeceras() });
 }
 
-async function reenviarFirms(firmsUrl) {
+function cabeceras() {
+    return {
+        'Content-Type': 'text/csv',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=300' // 5 min, FIRMS no cambia más rápido que eso
+    };
+}
 
+// Devuelve el CSV solo si es una respuesta válida CON filas de datos;
+// null en caso contrario (error HTTP, cuerpo de error con status 200, o
+// cabecera sola = fuente sin detecciones), para probar la siguiente fuente.
+async function pedirCsv(mapKey, fuente, bounds, diasAtras) {
     try {
+        const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/${fuente}/${bounds}/${diasAtras}`;
         const resp = await fetch(firmsUrl);
         if (!resp.ok) {
-            console.error(`[getFires] FIRMS respondió ${resp.status}`);
-            return new Response('NASA FIRMS no respondió correctamente', { status: 502 });
+            console.error(`[getFires] ${fuente} respondió ${resp.status}`);
+            return null;
         }
         const csv = await resp.text();
-
-        // FIRMS a veces devuelve un cuerpo de texto de error (p.ej. clave
-        // inválida o cuota agotada) con status 200 pero sin cabecera CSV real.
         if (!csv.toLowerCase().includes('latitude')) {
-            console.error('[getFires] Respuesta inesperada de FIRMS:', csv.slice(0, 200));
-            return new Response('Respuesta inesperada de NASA FIRMS (revisa la MAP_KEY o la cuota)', { status: 502 });
+            // FIRMS devuelve texto de error (clave inválida, cuota…) con 200.
+            console.error(`[getFires] ${fuente} respuesta inesperada:`, csv.slice(0, 200));
+            return null;
         }
-
-        return new Response(csv, {
-            headers: {
-                'Content-Type': 'text/csv',
-                'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'public, max-age=300' // 5 min, FIRMS no cambia más rápido que eso
-            }
-        });
+        const filas = csv.trim().split('\n').length - 1;
+        if (filas <= 0) return null; // cabecera sola: fuente viva pero sin datos
+        return csv;
     } catch (e) {
-        console.error('[getFires] Error de red contra FIRMS:', e.message);
-        return new Response('Error al contactar con NASA FIRMS', { status: 502 });
+        console.error(`[getFires] Error de red con ${fuente}:`, e.message);
+        return null;
     }
 }

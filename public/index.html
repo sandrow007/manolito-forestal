@@ -275,15 +275,34 @@
         body { touch-action: manipulation; }
         input, select, textarea, button { font-size: 16px; }
 
-        /* Dashboard como hoja inferior: no tapa medio mapa */
+        /* Dashboard como hoja inferior. OPACO en móvil: si es translúcido,
+           los controles del mapa (zoom, GPS…) se ven a través y parecen
+           "decoración" pegada al texto. dvh = altura real visible en iOS. */
         #dashboard {
             width: 100vw; right: 0; left: 0; top: auto; bottom: 0;
             max-height: 62vh;
+            max-height: 58dvh;
+            background: rgba(13, 18, 26, 0.97);
             border-radius: 20px 20px 0 0;
             padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
             border-left: none; border-right: none; border-bottom: none;
         }
         #dashboard.closed { transform: translateY(110%); }
+
+        /* Hoja EXPANDIDA: por encima de los botones flotantes (chat, PWA,
+           emergencia…), que quedan detrás mientras se lee y reaparecen al
+           colapsar. Así nada se dibuja encima del contenido del panel. */
+        #dashboard:not(.chip-movil):not(.closed) { z-index: 1900; }
+
+        /* Chip colapsado: solo la cabecera (marca + ✕), a un toque de altura.
+           Tocar la barra lo vuelve a desplegar; se puede navegar con el mapa. */
+        #dashboard.chip-movil {
+            max-height: none; height: auto; overflow: hidden;
+            padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            cursor: pointer;
+        }
+        #dashboard.chip-movil > *:not(.dashboard-header) { display: none; }
+        #dashboard.chip-movil .dashboard-header { margin-bottom: 0; }
 
         #reopen-dashboard-btn {
             right: 12px; top: auto;

@@ -3921,20 +3921,39 @@ async function cargarFuegosActivos() {
 
 // 8. INTERACTIVIDAD DE LA INTERFAZ Y LÓGICA LEGAL
 function setupUIInteractions() {
-    // En pantallas estrechas el panel arranca cerrado: nada desplegado
-    // por defecto, todo se abre a voluntad (excepto emergencias).
+    // En pantallas estrechas el panel arranca colapsado a un chip (barra
+    // fina con la cabecera): el mapa queda a la vista y se despliega con un
+    // toque en la barra. Nada queda "encima de todo" sin querer.
     if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
-        DOM.dashboard.classList.add('closed');
-        DOM.reopenDashboardBtn.style.display = 'block';
+        DOM.dashboard.classList.add('chip-movil');
     }
 
+    // En móvil el ✕ NO cierra el panel: lo colapsa a la barra-chip, para
+    // seguir navegando por el mapa sin perder la evaluación. En escritorio
+    // se comporta como siempre (cerrar del todo).
+    const esPantallaMovil = () => window.matchMedia('(max-width: 640px)').matches;
+
     DOM.toggleDashboardBtn.addEventListener('click', function () {
-        DOM.dashboard.classList.add('closed');
-        DOM.reopenDashboardBtn.style.display = 'block';
+        if (esPantallaMovil()) {
+            DOM.dashboard.classList.add('chip-movil');
+        } else {
+            DOM.dashboard.classList.add('closed');
+            DOM.reopenDashboardBtn.style.display = 'block';
+        }
+    });
+
+    // Tocar la barra del chip vuelve a desplegar el panel completo.
+    DOM.dashboard.addEventListener('click', function (e) {
+        if (esPantallaMovil() &&
+            DOM.dashboard.classList.contains('chip-movil') &&
+            !e.target.closest('#toggle-dashboard')) {
+            DOM.dashboard.classList.remove('chip-movil');
+        }
     });
 
     DOM.reopenDashboardBtn.addEventListener('click', function () {
         DOM.dashboard.classList.remove('closed');
+        DOM.dashboard.classList.remove('chip-movil');
         this.style.display = 'none';
     });
 
@@ -6611,7 +6630,7 @@ window.bandasPropagacion = api;
     function inyectarEstilos() {
         if (document.getElementById('evac-estilos')) return;
         const css = `
-#evac-alerta{position:fixed;top:0;left:0;right:0;z-index:1300;padding:12px 52px 12px 14px;font-size:17px;
+#evac-alerta{position:fixed;top:0;left:0;right:0;z-index:2600;padding:calc(12px + env(safe-area-inset-top,0px)) 52px 12px 14px;font-size:17px;
  font-weight:700;text-align:center;display:none;line-height:1.35}
 #evac-alerta.roja{background:#b71c1c;color:#fff;animation:evacParpadeo 1s step-start infinite}
 #evac-alerta.amarilla{background:#ffb300;color:#000}
@@ -6621,7 +6640,7 @@ window.bandasPropagacion = api;
 #evac-alerta .evac-cerrar-alerta{position:absolute;top:2px;right:4px;width:48px;min-width:48px;
  height:48px;min-height:48px;margin:0;padding:0;display:flex;align-items:center;justify-content:center;
  border:none;background:transparent;color:inherit;font-size:20px;font-weight:700;cursor:pointer}
-#evac-nav{position:fixed;inset:0;z-index:1250;pointer-events:none;display:none}
+#evac-nav{position:fixed;inset:0;z-index:2500;pointer-events:none;display:none}
 #evac-flecha{position:absolute;top:18%;left:50%;margin-left:-70px;width:140px;height:140px;
  transform-origin:50% 50%;will-change:transform}
 #evac-flecha svg{width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(255,60,0,.9));
