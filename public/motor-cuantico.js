@@ -4151,9 +4151,10 @@ function cargarJsPdf() {
 
 async function obtenerNombreLugar(lat, lon) {
     try {
-        // URL correcta de Nominatim (API de geocodificación inversa de OpenStreetMap)
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=es&zoom=10`;
-        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        // Mismo origen: el Worker (/reverse) consulta Nominatim servidor-a-
+        // servidor con caché, así el navegador nunca hace una petición
+        // cross-origin y no puede aparecer ningún error CORS en consola.
+        const resp = await fetch(`/reverse?lat=${lat}&lon=${lon}`);
         if (!resp.ok) return null;
         const data = await resp.json();
         const addr = data.address || {};
@@ -4164,8 +4165,7 @@ async function obtenerNombreLugar(lat, lon) {
         ].filter(Boolean);
         return partes.length ? partes.join(', ') : (data.display_name || null);
     } catch (e) {
-        console.warn('[obtenerNombreLugar] Error:', e.message);
-        return null;
+        return null; // degradación silenciosa: el nombre del lugar es opcional
     }
 }
 

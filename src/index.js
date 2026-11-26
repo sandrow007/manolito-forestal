@@ -8,6 +8,7 @@
 import { handleManolitoPost, handleManolitoOptions } from './manolito.js';
 import { handleGetFires } from './getFires.js';
 import { handleSenalPost, handleSenalGet, handleSenalOptions } from './senales.js';
+import { handleReverseGeocode } from './geocode.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -21,6 +22,11 @@ export default {
 
     if (url.pathname === '/getFires') {
       return handleGetFires(request, env);
+    }
+
+    if (url.pathname === '/reverse') {
+      if (request.method === 'GET') return handleReverseGeocode(request, env, ctx);
+      return new Response('Method Not Allowed', { status: 405 });
     }
 
     if (url.pathname === '/senal') {

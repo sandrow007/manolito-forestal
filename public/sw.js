@@ -25,7 +25,7 @@
 /* ================= CONFIGURACIÓN ================= */
 
 const CACHE_TILES  = 'manolito-tiles-v1';
-const CACHE_STATIC = 'manolito-static-v1';
+const CACHE_STATIC = 'manolito-static-v2';
 const CACHE_DATOS  = 'manolito-datos-v1';
 
 const CACHES_CONOCIDOS = [CACHE_TILES, CACHE_STATIC, CACHE_DATOS];
@@ -41,7 +41,7 @@ const TILE_HOSTS = [
 ];
 
 // Rutas del propio worker que sirven datos (network-first).
-const RUTAS_DATOS = ['/getFires', '/senal'];
+const RUTAS_DATOS = ['/getFires', '/senal', '/reverse'];
 
 const MAX_TILES_PRECARGA = 500;   // tope de seguridad anti-descargas masivas
 const TTL_TILES_MS = 30 * 24 * 3600 * 1000; // 30 días: los tiles caducan
