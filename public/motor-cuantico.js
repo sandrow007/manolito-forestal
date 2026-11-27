@@ -1529,10 +1529,14 @@ window.BalizaUltrasonica = BalizaUltrasonica;
       --me-borde: #2a2f3a;
     }
 
+    /* Raíl inferior-izquierdo (escritorio): emergencia en la base (12px),
+       encima bandas (86px), recursos (150px); la píldora PWA va a la
+       derecha de este botón (left:84px). En móvil todo el raíl sube por
+       encima del chip del dashboard (~64px). Nada se solapa con nada. */
     #me-fab {
       position: fixed;
-      left: 18px;
-      bottom: 90px;
+      left: 12px;
+      bottom: 12px;
       width: 62px;
       height: 62px;
       border-radius: 50%;
@@ -1548,6 +1552,12 @@ window.BalizaUltrasonica = BalizaUltrasonica;
     }
     #me-fab:active { transform: scale(0.92); }
     #me-fab svg { width: 30px; height: 30px; }
+
+    /* Móvil: el chip del dashboard (~64px + safe-area) ocupa la base;
+       el raíl completo se sube por encima de él. */
+    @media (max-width: 640px) {
+      #me-fab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+    }
 
     #me-fab.me-activo {
       animation: me-pulso 1.4s infinite;
@@ -2778,7 +2788,9 @@ const capasEffis = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/e
     attribution: 'EFFIS - Copernicus (actualizado por paso de satélite VIIRS, casi en tiempo real)'
 });
 
-// Control de capas en bottomright para que no tape el dashboard
+// Control de capas arriba a la izquierda: Leaflet apila en flujo zoom +
+// ubicación + capas (+ FWI) en la misma esquina, así es imposible que se
+// solapen entre sí. Abajo a la derecha chocaba con el chat y el dashboard.
 const capasBase = {
     "Oscura (Dark Matter)": baseDark,
     "Satélite (ESRI)": baseSat,
@@ -2792,7 +2804,7 @@ const capasOverlay = {
 };
 
 L.control.layers(capasBase, capasOverlay, {
-    position: 'bottomright',
+    position: 'topleft',
     collapsed: true   // todo se abre/cierra a voluntad; nada desplegado por defecto
 }).addTo(map);
 
@@ -4403,11 +4415,15 @@ document.addEventListener('DOMContentLoaded', () => {
         var css = document.createElement('style');
         css.id = 'capa-fwi-css';
         css.textContent = [
-            // Botón FWI: cuadrado de 48px SOLO con icono, debajo del control
-            // de zoom de Leaflet (que ocupa ~78px). Nada de tarjetas anchas
-            // que tapan el +/-: ocupa lo mismo que un botón de zoom.
-            '#capa-fwi-wrap{position:absolute;top:118px;left:10px;z-index:500;',
-            '  font-family:inherit;max-width:min(280px,calc(100vw - 32px));}',
+            // Botón FWI: cuadrado de 48px SOLO con icono. Vive DENTRO de la
+            // esquina superior izquierda de Leaflet (clase .leaflet-control),
+            // apilado en flujo bajo zoom/ubicación/capas: imposible que se
+            // solape. .capa-fwi-flotante es solo el fallback si no se
+            // encontrara la esquina (misma posición de antes).
+            '#capa-fwi-wrap{pointer-events:auto;font-family:inherit;',
+            '  max-width:min(280px,calc(100vw - 32px));}',
+            '#capa-fwi-wrap.capa-fwi-flotante{position:absolute;top:118px;',
+            '  left:10px;z-index:500;}',
             '#capa-fwi-toggle{width:48px;min-width:48px;height:48px;min-height:48px;',
             '  display:flex;align-items:center;justify-content:center;padding:0;',
             '  cursor:pointer;border-radius:10px;',
@@ -4545,7 +4561,16 @@ document.addEventListener('DOMContentLoaded', () => {
         wrap.appendChild(boton);
         wrap.appendChild(estado);
         wrap.appendChild(leyenda);
-        contenedor.appendChild(wrap);
+        // Dentro de la esquina Leaflet (zoom/ubicación/capas): apilado en
+        // flujo, cero solapes. Fallback: flotante absoluto como antes.
+        var esquinaMapa = document.querySelector('.leaflet-top.leaflet-left');
+        if (esquinaMapa) {
+            wrap.classList.add('leaflet-control');
+            esquinaMapa.appendChild(wrap);
+        } else {
+            wrap.classList.add('capa-fwi-flotante');
+            contenedor.appendChild(wrap);
+        }
 
         ui = { contenedor: wrap, boton: boton, leyenda: leyenda, estado: estado,
                reconstruirLeyenda: reconstruirLeyenda };
@@ -5029,17 +5054,22 @@ document.addEventListener('DOMContentLoaded', () => {
         var css = document.createElement('style');
         css.id = 'mf-recursos-css';
         css.textContent =
-            /* Botón: abajo-IZQUIERDA (chat abajo-derecha, dashboard arriba-derecha,
-               selector de idioma arriba-izquierda → sin colisiones). */
-            '#mf-recursos-toggle{position:fixed;left:12px;bottom:12px;z-index:1000;' +
+            /* Raíl abajo-IZQUIERDA: emergencia (12-74px) → bandas (86-138px)
+               → recursos (150px+). El panel se abre hacia arriba, sobre mapa
+               libre. La píldora PWA va a la derecha de emergencia (left:84px),
+               no en este raíl. En móvil todo sube por encima del chip. */
+            '#mf-recursos-toggle{position:fixed;left:12px;bottom:150px;z-index:1000;' +
             'min-width:48px;min-height:48px;border-radius:12px;border:1px solid rgba(0,243,255,.4);' +
             'background:rgba(10,14,20,.9);color:#fff;font-size:1.4rem;cursor:pointer;' +
             'display:flex;align-items:center;justify-content:center;padding:0 12px;gap:6px}' +
             '#mf-recursos-toggle[aria-pressed="true"]{background:rgba(0,120,180,.85)}' +
-            '#mf-recursos-panel{position:fixed;left:12px;bottom:72px;z-index:1000;' +
+            '#mf-recursos-panel{position:fixed;left:12px;bottom:210px;z-index:1000;' +
             'background:rgba(10,14,20,.94);color:#eee;border:1px solid rgba(0,243,255,.35);' +
             'border-radius:12px;padding:12px 14px;min-width:220px;max-width:calc(100vw - 24px);' +
             'font-size:.95rem;backdrop-filter:blur(4px)}' +
+            '@media (max-width:640px){' +
+            '#mf-recursos-toggle{bottom:calc(216px + env(safe-area-inset-bottom,0px))}' +
+            '#mf-recursos-panel{bottom:calc(276px + env(safe-area-inset-bottom,0px))}}' +
             '#mf-recursos-panel[hidden]{display:none}' +
             '#mf-recursos-panel fieldset{border:none;margin:0;padding:0}' +
             '#mf-recursos-panel legend{font-weight:700;margin-bottom:8px}' +
@@ -5538,16 +5568,16 @@ function onMapaListo() {
 }
 
 // ============================================================
-// 7. BOTÓN TOGGLE — accesible, >=48px, abajo-izquierda
-//    (no colisiona: zoom arriba-izq, idioma arriba-izq compensado,
-//     dashboard arriba-der, capas + chat abajo-der)
+// 7. BOTÓN TOGGLE — accesible, >=48px, raíl abajo-izquierda
+//    (emergencia ocupa 12-74px; este botón: 86-138px; recursos: 150px+.
+//     En móvil el raíl sube por encima del chip del dashboard)
 // ============================================================
 function inyectarCss() {
     if (document.getElementById('bandas-propagacion-css')) return;
     const style = document.createElement('style');
     style.id = 'bandas-propagacion-css';
     style.textContent = [
-        '#bandas-toggle{position:absolute;left:12px;bottom:96px;z-index:600;',
+        '#bandas-toggle{position:fixed;left:12px;bottom:86px;z-index:600;',
         'min-width:48px;min-height:48px;width:52px;height:52px;border-radius:10px;',
         'border:1px solid rgba(255,255,255,.12);background:rgba(14,19,28,.88);',
         'color:#ffe600;font-size:24px;line-height:1;cursor:pointer;',
@@ -5559,7 +5589,7 @@ function inyectarCss() {
         'border:1px solid rgba(255,255,255,.25);border-radius:6px;',
         'font:600 11px Inter,sans-serif;box-shadow:none;}',
         '.banda-propagacion-tooltip:before{display:none;}',
-        '@media (max-width:640px){#bandas-toggle{bottom:120px;left:10px;}}'
+        '@media (max-width:640px){#bandas-toggle{bottom:calc(152px + env(safe-area-inset-bottom,0px));}}'
     ].join('');
     document.head.appendChild(style);
 }
@@ -5862,13 +5892,16 @@ window.bandasPropagacion = api;
         boton = document.createElement('button');
         boton.id = 'pwa-btn-preparar-zona';
         boton.type = 'button';
-        // ≥48px de alto, bottom-left para no colisionar con el chat (bottom-right)
-        // ni con el dashboard (panel lateral superior).
+        // ≥48px de alto. Raíl inferior: a la DERECHA del FAB de emergencia
+        // (left:84px), sin pisar el raíl de botones ni el chat (bottom-right).
+        // La altura exacta (bottom) la fija colocarEnRail() según pantalla.
         boton.style.cssText =
-            'position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);' +
+            'position:fixed;left:84px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);' +
             'z-index:1800;min-height:48px;min-width:48px;padding:12px 40px 12px 18px;border:0;' +
             'border-radius:12px;background:#00f3ff;color:#070a10;cursor:pointer;' +
-            'font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.6);';
+            'font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.6);' +
+            /* Nunca llega al FAB del chat (esquina derecha): texto con ellipsis */
+            'max-width:calc(100vw - 180px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
         boton.setAttribute('aria-label', tt('pwa.prepararZona'));
         boton.textContent = tt('pwa.prepararZona');
         boton.addEventListener('click', prepararZona);
@@ -5893,7 +5926,7 @@ window.bandasPropagacion = api;
         miniFab.id = 'pwa-btn-preparar-mini';
         miniFab.type = 'button';
         miniFab.style.cssText =
-            'position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);' +
+            'position:fixed;left:84px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);' +
             'z-index:1800;width:48px;height:48px;border:0;border-radius:50%;display:none;' +
             'align-items:center;justify-content:center;background:rgba(0,243,255,.35);' +
             'color:#070a10;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);';
@@ -5909,7 +5942,7 @@ window.bandasPropagacion = api;
         zonaProgreso.setAttribute('role', 'status');
         zonaProgreso.setAttribute('aria-live', 'polite');
         zonaProgreso.style.cssText =
-            'position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);' +
+            'position:fixed;left:84px;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);' +
             'z-index:1800;width:min(320px,80vw);padding:10px 12px;border-radius:10px;' +
             'background:rgba(7,10,16,.92);color:#00f3ff;font:600 12px/1.4 system-ui,sans-serif;' +
             'display:none;border:1px solid rgba(0,243,255,.25);';
@@ -5925,6 +5958,18 @@ window.bandasPropagacion = api;
         document.body.appendChild(boton);
         document.body.appendChild(miniFab);
         document.body.appendChild(zonaProgreso);
+        // Altura en el raíl: en escritorio la base es 12px; en móvil el chip
+        // del dashboard (~64px) ocupa la base y todo sube a 78px. Se recoloca
+        // solo si la ventana cruza el breakpoint.
+        var mqMovilRail = window.matchMedia('(max-width: 640px)');
+        var colocarEnRail = function () {
+            var base = mqMovilRail.matches ? 78 : 12;
+            boton.style.bottom = 'calc(env(safe-area-inset-bottom,0px) + ' + base + 'px)';
+            miniFab.style.bottom = 'calc(env(safe-area-inset-bottom,0px) + ' + base + 'px)';
+            zonaProgreso.style.bottom = 'calc(env(safe-area-inset-bottom,0px) + ' + (base + 60) + 'px)';
+        };
+        if (mqMovilRail.addEventListener) mqMovilRail.addEventListener('change', colocarEnRail);
+        colocarEnRail();
         // Respeta la preferencia guardada de la última visita.
         if (botonOcultoGuardado()) ponerBotonColapsado(true);
     }
