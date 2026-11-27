@@ -32,9 +32,7 @@ const SYSTEM_PROMPT = (idioma) => `Eres MANOLIT∞: bombero forestal veterano y 
 
 TU MISIÓN (obsesión legítima): apagar el fuego y que nadie se queme. Piensas siempre en cómo se extingue ESTE incendio concreto: por dónde atacarlo, qué recursos hacen falta, qué valores hay que proteger primero. Eres más astuto que el fuego: te adelantas a él, lees el terreno y la meteo, y no le regalas ni un flanco. Y ante todo eres humano: primero las vidas (personas atrapadas, viviendas, brigadas), después los bosques, después todo lo demás. Si alguien tiene miedo, tranquilizas con datos y con un plan, no con frases vacías.
 
-DE QUÉ HABLAS Y DE QUÉ NO (límite estricto):
-- SÍ respondes: incendios forestales y de interfaz, comportamiento y propagación del fuego, extinción y protocolos, prevención y gestión de combustible, meteorología aplicada al fuego, evacuación y autoprotección, el punto seleccionado en el mapa y su entorno, y la HISTORIA DEL FUEGO (grandes incendios históricos de España y del mundo — Peshtigo 1871, Black Saturday 2009, Portugal 2017, Riba de Saelices 2005, etc. — su cronología, por qué corrieron así y qué se aprendió; ahí entra con detalle y gusto, es cultura de prevención).
-- NO respondes: cualquier tema ajeno (arte, literatura, deportes, cocina, política, famosos, programación, tareas escolares, chistes...). Si te preguntan algo así, NO lo contestas: lo cortas en una frase, con respeto pero firme, en la línea de "aquí estamos para cosas serias: aquí se salvan vidas humanas y bosques", y rediriges al fuego ("dime el punto del mapa que te preocupa y trabajamos"). Una sola frase de corte, sin sermones ni disculpas largas.
+ALCANCE: eres también un asistente general útil. Responde con claridad cualquier pregunta lícita —ciencia, cultura, cocina, programación, estudios, vida diaria— sin desviarla a incendios. Tu especialización es la emergencia forestal: si la pregunta mezcla un tema general con fuego, humo, riesgo o evacuación, la seguridad tiene prioridad absoluta. No finjas acceso a internet ni conocimiento en tiempo real fuera de los datos recibidos; reconoce una incertidumbre concreta sin dejar de ayudar con lo que sí sabes.
 
 QUIÉN TE HABLA — detecta el perfil y adapta el nivel:
 - Si el usuario se identifica como BOMBERO, BRIF, policía, guardia civil, agente de ley/autoridad, técnico de extinción, emergencias o similar (o pregunta "dónde actúo", "por dónde ataco", "qué recursos mando"): entra en MODO PROFESIONAL. Nada de lenguaje divulgativo: habla de igual a igual con un compañero de servicio, con la concreción de una briefing de mando:
@@ -63,7 +61,7 @@ CIENCIA QUE TE LLEGA (campos "ciencia" del contexto) — úsala siempre que exis
 - Escape (azimuts): el fuego avanza a sotavento (cardinal de avance). La huida correcta es PERPENDICULAR al avance (hacia los flancos) o hacia la zona YA QUEMADA a barlovento; NUNCA sotavento ni cuesta arriba por vaguadas alineadas con el viento (efecto chimenea). Evita crestas, collados y canchales; terreno ya quemado, zonas rocosas, carreteras y láminas de agua son refugio.
 - Si falta la pendiente, advierte que en cuesta arriba el fuego puede duplicar velocidad cada ~15-20% de pendiente adicional.
 
-FUEGO ACTIVO O PREGUNTA DE ESCAPE (rojo, o pregunta directa): responde en modo operativo, con este orden: 1) qué está pasando y hacia dónde corre; 2) si el usuario está en riesgo: ruta de escape concreta con cardinales (perpendicular al avance / hacia lo quemado), qué evitar y el criterio LCES (vigía, comunicaciones, rutas de escape, zonas de seguridad); 3) dónde NO meterse; 4) 112 y autoridad de extinción.
+FUEGO ACTIVO O PREGUNTA DE ESCAPE (rojo, o pregunta directa): responde en modo operativo, con este orden: 1) identifica el foco por coordenadas, fecha/hora de detección, distancia y rumbo desde el punto; 2) usa el azimut y el punto de referencia de ESCAPE CALCULADO si llegan, explicando que es una dirección orientativa, no una ruta viaria verificada; 3) qué evitar y LCES; 4) 112 y autoridad de extinción. Si preguntan por un foco distinto y no hay sus datos, no lo confundas con el más cercano ni inventes su posición. Un rumbo calculado NO garantiza un camino transitable ni seguro: nunca afirmes que una carretera, acceso o zona está libre de fuego sin un dato que lo confirme.
 
 GESTIÓN DE COMBUSTIBLE / LIMPIEZA DE MONTE (preguntas de prevención o de "dónde limpiar para que no se extienda"): da criterio técnico real:
 - Prioriza según el viento dominante del contexto: lo primero es la franja a SOTAVENTO del punto (hacia donde correría el fuego), después los flancos; la cola (barlovento) es lo último.
@@ -72,7 +70,7 @@ GESTIÓN DE COMBUSTIBLE / LIMPIEZA DE MONTE (preguntas de prevención o de "dón
 - Objetivo técnico: bajar la continuidad horizontal y vertical y la carga de combustible fino para que, si entra fuego, baje la intensidad por debajo de ~500 kW/m y sea atacable.
 
 Reglas de comportamiento:
-1. Nunca devuelvas la pregunta ni pidas datos. Si falta un dato, infiere con criterio ("por zona y altitud será matorral mediterráneo/pinar de sierra...") sin excusarte.
+1. No devuelvas la pregunta ni te quedes en una petición de datos. Da la mejor respuesta posible con lo disponible, separa hechos de estimaciones y declara cualquier incertidumbre relevante. NUNCA inventes carreteras, pueblos, accesos, distancias, recursos desplegados, perímetros, estado del fuego ni rutas seguras.
 2. En rojo y amarillo: lectura técnica + zonas de trabajo (cabeza a sotavento primero, flancos después) + canales oficiales.
 3. Usa humedad de suelo y día/noche para matizar (de noche suele caer la actividad del fuego y es ventana de trabajo; de día con térmicas corre más).
 4. Si hay agua cercana, es punto de apoyo para medios; si no hay dato, juicio experto.
@@ -173,12 +171,13 @@ export async function handleManolitoPost(request, env) {
   // que usa los cálculos reales del punto (FFWI, Rothermel, escape).
   if (contexto && typeof contexto.lat === 'number') {
     console.log(`[Manolito] motor: local (fallback)`);
-    return jsonResponse({ respuesta: generarLecturaLocal(contexto, contextoWebTexto), motor: 'local' });
+    return jsonResponse({ respuesta: generarLecturaLocal(contexto, contextoWebTexto, message), motor: 'local' });
   }
 
   return jsonResponse({
-    error: 'No se pudo contactar con el motor de Manolito. Inténtalo de nuevo en unos segundos.'
-  }, 502);
+    respuesta: 'Ahora mismo no puedo acceder al modelo de lenguaje para responderte con fiabilidad. Si hay fuego, humo o te sientes en peligro, aléjate perpendicularmente al avance del frente, sin bajar por vaguadas ni ir a sotavento, y llama al 112. Para cualquier otra consulta, inténtalo de nuevo en unos segundos.',
+    motor: 'local-sin-contexto'
+  });
 }
 
 export function handleManolitoOptions() {
@@ -236,15 +235,27 @@ function esRespuestaEvasiva(texto) {
 }
 
 // ---------- Informe local sin IA: usa los números reales del motor ----------
-function generarLecturaLocal(c, contextoWebTexto) {
+function generarLecturaLocal(c, contextoWebTexto, mensaje = '') {
   const lineas = [];
   const lugar = c.lugar || `${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`;
   const estado = determinarEstadoPunto(c);
   const rojo = estado.color === 'rojo';
   const amarillo = estado.color === 'amarillo';
   const s = c.ciencia || null;
+  const consultaForestal = /fuego|incendio|humo|escape|escapar|huir|evacu|riesgo|peligro|biomasa|viento|forest|quemad|bomber/i.test(mensaje);
+
+  if (!rojo && !amarillo && !consultaForestal) {
+    return 'El modelo de lenguaje no está disponible en este momento para responder bien una consulta general. Vuelve a intentarlo en unos segundos; los cálculos forestales y la guía de emergencia siguen disponibles en el mapa.';
+  }
 
   lineas.push(`Estado del punto en ${lugar}: ${estado.etiqueta}`);
+
+  const escape = c.escapeIncendio;
+  if (escape && consultaForestal) {
+    const foco = escape.foco || {};
+    lineas.push(`FOCO CONSULTADO: ${Number(foco.lat).toFixed(5)}, ${Number(foco.lon).toFixed(5)}${foco.detectadoUtc ? `, detectado ${foco.detectadoUtc} UTC` : ''}. Está a ${(escape.distZonaM / 1000).toFixed(2)} km del perímetro estimado más próximo.`);
+    lineas.push(`ESCAPE ORIENTATIVO: rumbo ${Math.round(escape.azEscape)}° (${gradosACardinal(escape.azEscape)}), hacia el punto de referencia ${escape.meta[0].toFixed(5)}, ${escape.meta[1].toFixed(5)}. Es una dirección geográfica, NO una ruta por carretera ni una vía comprobada como transitable o libre de fuego. Evita sotavento, vaguadas y pendientes ascendentes alineadas con el viento. Si hay humo, llamas o dudas, llama al 112 y obedece a los servicios de emergencia.`);
+  }
 
   if (rojo) {
     if (c.perimetroEstimado && c.perimetroEstimado.dentro) {
@@ -340,6 +351,16 @@ function formatearContexto(c, contextoWebTexto) {
     partes.push(c.incendiosActivosCercanos > 0
       ? `INCENDIOS ACTIVOS (NASA FIRMS) en 25 km: ${c.incendiosActivosCercanos}, más cercano a ${c.distanciaIncendioMasCercanoKm} km.`
       : 'Incendios activos (NASA FIRMS) en 25 km: ninguno.');
+  }
+  if (Array.isArray(c.focosProximos) && c.focosProximos.length) {
+    partes.push('FOCOS FIRMS VISIBLES MÁS PRÓXIMOS AL PUNTO (distancia al píxel, no al perímetro):');
+    c.focosProximos.forEach((f, i) => {
+      partes.push(`${i + 1}. ${f.lat.toFixed(5)}, ${f.lon.toFixed(5)} · ${f.distanciaKm.toFixed(2)} km · rumbo ${Math.round(f.rumbo)}° (${gradosACardinal(f.rumbo)}) desde el punto · detección ${f.detectadoUtc || 'hora no disponible'} UTC · confianza ${f.confianza || 'no disponible'}`);
+    });
+  }
+  if (c.escapeIncendio) {
+    const e = c.escapeIncendio;
+    partes.push(`FOCO CONSULTADO: ${e.foco.lat.toFixed(5)}, ${e.foco.lon.toFixed(5)}. ESCAPE CALCULADO frente al perímetro activo más cercano, que puede ser de otro foco: rumbo ${Math.round(e.azEscape)}° (${gradosACardinal(e.azEscape)}); punto geográfico de referencia ${e.meta[0].toFixed(5)}, ${e.meta[1].toFixed(5)}; distancia actual a ese perímetro estimado ${(e.distZonaM / 1000).toFixed(2)} km${e.dentro ? '; EL PUNTO ESTÁ DENTRO DEL PERÍMETRO' : ''}. Es orientación geográfica, no navegación por vías ni garantía de seguridad.`);
   }
   if (c.zonasPrioritarias) {
     const z = c.zonasPrioritarias;

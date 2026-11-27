@@ -228,9 +228,16 @@
         padding-top: 12px; 
         margin-bottom: 14px; 
     }
-    /* Modo ciudadano (simplificado): se oculta el registro cuántico.
-       Por defecto (sin la clase) estás en modo científico y se ve. */
-    #dashboard.mode-citizen #quantum-log-section { display: none; }
+    #mode-description {
+        margin: -6px 0 14px; font-size: 0.75rem; line-height: 1.45;
+        color: var(--text-muted); text-align: center;
+    }
+    #dashboard.mode-citizen #mode-description { color: var(--amber); }
+    /* Ciudadano conserva la recomendación y la propagación esencial; los
+       modelos, coordenadas operativas y el registro son solo científicos. */
+    #dashboard.mode-citizen #quantum-log-section,
+    #dashboard.mode-citizen #ui-ciencia-texto,
+    #dashboard.mode-citizen #ui-propagacion-texto { display: none; }
     #quantum-log-section h2 {
         font-size: 0.85rem; margin: 0 0 8px 0; color: var(--cyan);
         display: flex; justify-content: space-between; align-items: center;
@@ -479,8 +486,9 @@
     </div>
 
     <div class="mode-toggle-row">
-        <button id="toggle-mode">Modo ciudadano</button>
+        <button id="toggle-mode" aria-pressed="false">Modo ciudadano</button>
     </div>
+    <p id="mode-description">Vista científica · FWI, propagación e intensidad técnica</p>
 
     <div class="readout-coords" id="ui-coords">--, --</div>
 

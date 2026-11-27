@@ -1025,12 +1025,7 @@ function aplicarIdioma() {
         percentPlaceholder.textContent = t('selecciona');
     }
 
-    const toggleModeBtn = document.getElementById('toggle-mode');
-    if (toggleModeBtn) {
-        const dashboard = document.getElementById('dashboard');
-        const esCiudadano = dashboard && dashboard.classList.contains('mode-citizen');
-        toggleModeBtn.textContent = esCiudadano ? t('modoCientifico') : t('modoCiudadano');
-    }
+    actualizarModoInterfaz();
 
     const chatInput = document.getElementById('manolito-input');
     if (chatInput) chatInput.placeholder = t('chatPlaceholder');
@@ -3880,8 +3875,12 @@ function dibujarPerimetrosActivos(puntos) {
 // filtroBounds (opcional): en vista global solo se pintan los puntos que
 // caen dentro del viewport con margen; el snapshot mundial puede traer
 // varios miles de detecciones y pintarlas todas colapsaría el navegador.
+let deteccionesFuegosVisibles = [];
+let focoSeleccionadoManolito = null;
+
 function procesarCsvFuegos(csv, filtroBounds = null) {
     grupoFuegos.clearLayers();
+    deteccionesFuegosVisibles = [];
     const lineas = csv.trim().split('\n');
     if (lineas.length <= 1) {
         DOM.contadorFuegos.textContent = t('ceroFuegosVisibles');
@@ -3953,7 +3952,13 @@ function procesarCsvFuegos(csv, filtroBounds = null) {
             <button class="evaluar-fuego-btn" data-lat="${lat}" data-lon="${lon}">${t('popupEvaluarRiesgo')}</button>
         `);
 
-        puntosParaPerimetro.push({ lat, lon, confianza });
+        const deteccion = {
+            id: `${lat.toFixed(5)},${lon.toFixed(5)}`,
+            lat, lon, confianza,
+            detectadoUtc: detectadoTxt.replace(/ UTC$/, '')
+        };
+        puntosParaPerimetro.push(deteccion);
+        deteccionesFuegosVisibles.push(deteccion);
         contador++;
     }
 
@@ -4004,8 +4009,30 @@ async function cargarFuegosActivos() {
     }
 }
 
+function actualizarModoInterfaz() {
+    const boton = document.getElementById('toggle-mode');
+    const descripcion = document.getElementById('mode-description');
+    if (!boton || !DOM.dashboard) return;
+    const ciudadano = DOM.dashboard.classList.contains('mode-citizen');
+    boton.textContent = ciudadano ? t('modoCientifico') : t('modoCiudadano');
+    boton.title = ciudadano ? t('titleModoCiencia') : t('titleModoCiudadano');
+    boton.setAttribute('aria-pressed', String(ciudadano));
+    if (descripcion) {
+        const textos = {
+            es: ciudadano ? 'Vista ciudadana · riesgo y recomendaciones, sin datos técnicos' : 'Vista científica · FWI, propagación e intensidad técnica',
+            ca: ciudadano ? 'Vista ciutadana · risc i recomanacions, sense dades tècniques' : 'Vista científica · FWI, propagació i intensitat tècnica',
+            eu: ciudadano ? 'Herritar ikuspegia · arriskua eta gomendioak, datu teknikorik gabe' : 'Ikuspegi zientifikoa · FWI, hedapena eta intentsitate teknikoa',
+            gl: ciudadano ? 'Vista cidadá · risco e recomendacións, sen datos técnicos' : 'Vista científica · FWI, propagación e intensidade técnica',
+            en: ciudadano ? 'Citizen view · risk and guidance, without technical data' : 'Scientific view · FWI, spread and fire intensity',
+            fr: ciudadano ? 'Vue citoyenne · risque et recommandations, sans données techniques' : 'Vue scientifique · FWI, propagation et intensité technique'
+        };
+        descripcion.textContent = textos[idiomaActual] || textos.es;
+    }
+}
+
 // 8. INTERACTIVIDAD DE LA INTERFAZ Y LÓGICA LEGAL
 function setupUIInteractions() {
+    actualizarModoInterfaz();
     // En pantallas estrechas el panel arranca colapsado a un chip (barra
     // fina con la cabecera): el mapa queda a la vista y se despliega con un
     // toque en la barra. Nada queda "encima de todo" sin querer.
@@ -4045,9 +4072,7 @@ function setupUIInteractions() {
     if (DOM.toggleModeBtn) {
         DOM.toggleModeBtn.addEventListener('click', function () {
             DOM.dashboard.classList.toggle('mode-citizen');
-            const isCitizenMode = DOM.dashboard.classList.contains('mode-citizen');
-            this.textContent = isCitizenMode ? t('modoCientifico') : t('modoCiudadano');
-            this.title = isCitizenMode ? t('titleModoCiencia') : t('titleModoCiudadano');
+            actualizarModoInterfaz();
         });
     }
 
@@ -4063,6 +4088,7 @@ function setupUIInteractions() {
     }
 
     const debouncedObtenerDatosClimaticos = debounce(function (e) {
+        focoSeleccionadoManolito = null;
         obtenerDatosClimaticos(e.latlng.lat, e.latlng.lng);
     }, 500);
     map.on('click', debouncedObtenerDatosClimaticos);
@@ -4071,6 +4097,7 @@ function setupUIInteractions() {
         if (e.target && e.target.classList.contains('evaluar-fuego-btn')) {
             const lat = parseFloat(e.target.dataset.lat);
             const lon = parseFloat(e.target.dataset.lon);
+            focoSeleccionadoManolito = deteccionesFuegosVisibles.find(f => f.lat === lat && f.lon === lon) || { lat, lon };
             obtenerDatosClimaticos(lat, lon);
             map.closePopup();
         }
@@ -4136,6 +4163,35 @@ function crearBurbuja(texto, clase) {
     return div;
 }
 
+function prepararContextoParaChat() {
+    const actual = window.ultimoContextoManolito;
+    if (!actual) return null;
+    const contexto = { ...actual };
+    const rad = Math.PI / 180;
+    const rumbo = (lat1, lon1, lat2, lon2) => {
+        const dLon = (lon2 - lon1) * rad;
+        const y = Math.sin(dLon) * Math.cos(lat2 * rad);
+        const x = Math.cos(lat1 * rad) * Math.sin(lat2 * rad) -
+            Math.sin(lat1 * rad) * Math.cos(lat2 * rad) * Math.cos(dLon);
+        return (Math.atan2(y, x) / rad + 360) % 360;
+    };
+    const proximos = deteccionesFuegosVisibles.map(foco => ({
+        ...foco,
+        distanciaKm: distanciaHaversineMetros(actual.lat, actual.lon, foco.lat, foco.lon) / 1000,
+        rumbo: rumbo(actual.lat, actual.lon, foco.lat, foco.lon)
+    })).sort((a, b) => a.distanciaKm - b.distanciaKm);
+    contexto.focosProximos = proximos.slice(0, 8);
+
+    const foco = focoSeleccionadoManolito
+        ? proximos.find(f => f.id === focoSeleccionadoManolito.id) || proximos[0]
+        : proximos[0];
+    if (foco && window.manolitoEvacuacion && typeof window.manolitoEvacuacion.calcularVectorEscape === 'function') {
+        const escape = window.manolitoEvacuacion.calcularVectorEscape(actual.lat, actual.lon);
+        if (escape) contexto.escapeIncendio = { ...escape, foco };
+    }
+    return contexto;
+}
+
 async function enviarMensajeManolito() {
     const input = document.getElementById('manolito-input');
     const texto = input.value.trim();
@@ -4151,7 +4207,7 @@ async function enviarMensajeManolito() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: texto,
-                contexto: window.ultimoContextoManolito || null,
+                contexto: prepararContextoParaChat(),
                 idioma: (typeof idiomaActual !== 'undefined') ? idiomaActual : 'es'
             })
         });
@@ -6264,7 +6320,7 @@ window.bandasPropagacion = api;
  *    corriendo. Botones >= 48px, role="alert", vibra en alerta roja.
  *
  * Expone: window.manolitoEvacuacion = { iniciar, detener, vigilar,
- *   detenerVigilancia, estado }
+ *   detenerVigilancia, calcularVectorEscape, estado }
  * SIN WIDGET FLOTANTE: este módulo no pinta ningún botón permanente en
  * el mapa. La activación se hace desde el modo de emergencias
  * (modo-emergencias.js): botón "Huir del incendio" y vigilancia de
@@ -7124,6 +7180,7 @@ body.modo-accesible #evac-flecha svg{animation:none;filter:drop-shadow(0 0 14px 
         detener: detenerEvacuacion,
         vigilar: iniciarMonitoreo,
         detenerVigilancia: detenerMonitoreo,
+        calcularVectorEscape,
         estado
     };
 })();
