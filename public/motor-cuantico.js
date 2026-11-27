@@ -48,6 +48,8 @@ const IDIOMAS = {
         popupIncendioActivo: "Incendio activo (VIIRS)",
         popupBrillo: "Brillo",
         popupConfianza: "Confianza",
+        popupDetectado: "Detectado",
+        popupConsultado: "Datos consultados",
         popupEvaluarRiesgo: "Evaluar riesgo cuántico",
         tooltipPropagacion: "Zona estimada de propagación (según viento actual)",
         popupEstresBiomasa: "Peligro (FWI)",
@@ -91,6 +93,7 @@ const IDIOMAS = {
         fwiToggle: "Índice FWI (peligro de incendio)",
         fwiToggleActivar: "Activar capa FWI de peligro de incendio",
         fwiToggleDesactivar: "Desactivar capa FWI de peligro de incendio",
+        fwiSoloMapaOscuro: "El índice FWI solo está disponible con el mapa oscuro (cámbialo en el selector de capas)",
         fwiLeyendaTitulo: "Índice FWI (EFFIS)",
         fwiLeyendaExpandir: "Mostrar leyenda FWI",
         fwiLeyendaColapsar: "Ocultar leyenda FWI",
@@ -208,6 +211,8 @@ const IDIOMAS = {
         popupIncendioActivo: "Incendi actiu (VIIRS)",
         popupBrillo: "Brillantor",
         popupConfianza: "Confiança",
+        popupDetectado: "Detectat",
+        popupConsultado: "Dades consultades",
         popupEvaluarRiesgo: "Avaluar risc quàntic",
         tooltipPropagacion: "Zona estimada de propagació (segons el vent actual)",
         popupEstresBiomasa: "Estrès de Biomassa",
@@ -251,6 +256,7 @@ const IDIOMAS = {
         fwiToggle: "Índex FWI (perill d'incendi)",
         fwiToggleActivar: "Activar la capa FWI de perill d'incendi",
         fwiToggleDesactivar: "Desactivar la capa FWI de perill d'incendi",
+        fwiSoloMapaOscuro: "L'índex FWI només està disponible amb el mapa fosc (canvia'l al selector de capes)",
         fwiLeyendaTitulo: "Índex FWI (EFFIS)",
         fwiLeyendaExpandir: "Mostrar la llegenda FWI",
         fwiLeyendaColapsar: "Amagar la llegenda FWI",
@@ -368,6 +374,8 @@ const IDIOMAS = {
         popupIncendioActivo: "Su aktiboa (VIIRS)",
         popupBrillo: "Distira",
         popupConfianza: "Konfiantza",
+        popupDetectado: "Antzemandakoa",
+        popupConsultado: "Datuak eskuratuta",
         popupEvaluarRiesgo: "Arrisku kuantikoa ebaluatu",
         tooltipPropagacion: "Zabalpen estimatua (uneko haizearen arabera)",
         popupEstresBiomasa: "Biomasa Estresa",
@@ -411,6 +419,7 @@ const IDIOMAS = {
         fwiToggle: "FWI indizea (sute arriskua)",
         fwiToggleActivar: "Aktibatu sute arriskuaren FWI geruza",
         fwiToggleDesactivar: "Desaktibatu sute arriskuaren FWI geruza",
+        fwiSoloMapaOscuro: "FWI indizea mapa ilunarekin bakarrik dago eskuragarri (aldatu geruza-hautatzailean)",
         fwiLeyendaTitulo: "FWI indizea (EFFIS)",
         fwiLeyendaExpandir: "Erakutsi FWI legenda",
         fwiLeyendaColapsar: "Ezkutatu FWI legenda",
@@ -528,6 +537,8 @@ const IDIOMAS = {
         popupIncendioActivo: "Lume activo (VIIRS)",
         popupBrillo: "Brillo",
         popupConfianza: "Confianza",
+        popupDetectado: "Detectado",
+        popupConsultado: "Datos consultados",
         popupEvaluarRiesgo: "Avaliar risco cuántico",
         tooltipPropagacion: "Zona estimada de propagación (segundo o vento actual)",
         popupEstresBiomasa: "Peligro (FWI)",
@@ -571,6 +582,7 @@ const IDIOMAS = {
         fwiToggle: "Índice FWI (perigo de incendio)",
         fwiToggleActivar: "Activar a capa FWI de perigo de incendio",
         fwiToggleDesactivar: "Desactivar a capa FWI de perigo de incendio",
+        fwiSoloMapaOscuro: "O índice FWI só está dispoñible co mapa escuro (cámbiao no selector de capas)",
         fwiLeyendaTitulo: "Índice FWI (EFFIS)",
         fwiLeyendaExpandir: "Mostrar a lenda FWI",
         fwiLeyendaColapsar: "Agochar a lenda FWI",
@@ -688,6 +700,8 @@ const IDIOMAS = {
         popupIncendioActivo: "Active fire (VIIRS)",
         popupBrillo: "Brightness",
         popupConfianza: "Confidence",
+        popupDetectado: "Detected",
+        popupConsultado: "Data fetched",
         popupEvaluarRiesgo: "Evaluate quantum risk",
         tooltipPropagacion: "Estimated spread zone (based on current wind)",
         popupEstresBiomasa: "Biomass Stress",
@@ -731,6 +745,7 @@ const IDIOMAS = {
         fwiToggle: "FWI index (fire danger)",
         fwiToggleActivar: "Enable FWI fire danger layer",
         fwiToggleDesactivar: "Disable FWI fire danger layer",
+        fwiSoloMapaOscuro: "The FWI index is only available on the dark base map (switch it in the layer selector)",
         fwiLeyendaTitulo: "FWI index (EFFIS)",
         fwiLeyendaExpandir: "Show FWI legend",
         fwiLeyendaColapsar: "Hide FWI legend",
@@ -848,6 +863,8 @@ const IDIOMAS = {
         popupIncendioActivo: "Incendie actif (VIIRS)",
         popupBrillo: "Luminosité",
         popupConfianza: "Confiance",
+        popupDetectado: "Détecté",
+        popupConsultado: "Données récupérées",
         popupEvaluarRiesgo: "Évaluer le risque quantique",
         tooltipPropagacion: "Zone de propagation estimée (selon le vent actuel)",
         popupEstresBiomasa: "Stress de la Biomasse",
@@ -891,6 +908,7 @@ const IDIOMAS = {
         fwiToggle: "Indice FWI (danger d'incendie)",
         fwiToggleActivar: "Activer la couche FWI de danger d'incendie",
         fwiToggleDesactivar: "Désactiver la couche FWI de danger d'incendie",
+        fwiSoloMapaOscuro: "L'indice FWI n'est disponible qu'avec la carte sombre (changez-la dans le sélecteur de couches)",
         fwiLeyendaTitulo: "Indice FWI (EFFIS)",
         fwiLeyendaExpandir: "Afficher la légende FWI",
         fwiLeyendaColapsar: "Masquer la légende FWI",
@@ -3406,7 +3424,7 @@ function recalcularCienciaFuego() {
     const lineas = [
         `<b>Índice FWI oficial (Van Wagner, estándar EFFIS)</b>`,
         c.fwi ? `▸ FWI: <b>${c.fwi.fwi}</b> (${nivelFWI(c.fwi.fwi)}) · normalizado al ${c.pct}% — umbral de colores: 40% ≈ FWI 30, 75% ≈ FWI 56` : '',
-        c.fwi ? `▸ Subíndices: FFMC ${c.fwi.ffmc} · ISI ${c.fwi.isi} · BUI ${c.fwi.bui}` : '',
+        c.fwi ? `▸ Subíndices cffdrs: FFMC ${c.fwi.ffmc} · DMC ${c.fwi.dmc} · DC ${c.fwi.dc} · ISI ${c.fwi.isi} · BUI ${c.fwi.bui}` : '',
         `<b>Análisis científico (Fosberg / Rothermel / Byram)</b>`,
         `▸ Peligro meteorológico FFWI: <b>${s.ffwi}</b> (${s.ffwiNivel})`,
         `▸ Humedad del combustible fino (1h): ${s.humedadCombustible1h}%`
@@ -3698,17 +3716,6 @@ function suavizarChaikin(coords, iteraciones = 2) {
     return pts;
 }
 
-// Radio del grupo en metros: distancia del centroide al punto más alejado.
-function radioGrupoMetros(puntos) {
-    const lat0 = puntos.reduce((s, p) => s + p.lat, 0) / puntos.length;
-    const lon0 = puntos.reduce((s, p) => s + p.lon, 0) / puntos.length;
-    let max = 0;
-    for (const p of puntos) {
-        max = Math.max(max, distanciaHaversineMetros(lat0, lon0, p.lat, p.lon));
-    }
-    return max;
-}
-
 function areaPoligonoHa(coordsLatLon) {
     if (coordsLatLon.length < 3) return 0;
     const lat0 = coordsLatLon.reduce((s, c) => s + c[0], 0) / coordsLatLon.length;
@@ -3767,57 +3774,104 @@ function evaluarPerimetroParaPunto(lat, lon) {
     return mejor;
 }
 
+// Radio de buffer por detección: píxel VIIRS 375 m + error de
+// geolocalización. Es la unidad con la que se "reconstruye" lo quemado.
+const RADIO_DETECCION_M = 500;
+// Margen de la envolvente en grupos compactos: incertidumbre de detección,
+// NO proporcional al tamaño del grupo (un margen del 15% inflaba focos de
+// 10 km con 1,5 km de terreno no quemado por cada lado).
+const MARGEN_ENVOLVENTE_M = 550;
+
+function perimetroPoligonoM(coords) {
+    let p = 0;
+    for (let i = 0; i < coords.length; i++) {
+        const a = coords[i], b = coords[(i + 1) % coords.length];
+        p += distanciaHaversineMetros(a[0], a[1], b[0], b[1]);
+    }
+    return p;
+}
+
+// Compacidad de un polígono (P²/4πA): 1 = círculo, ~1,3 = cuadrado,
+// >4 = forma muy alargada. Una envolvente convexa de un frente lineal o de
+// puntos dispersos "inventa" terreno quemado entre detecciones lejanas:
+// en ese caso NO se dibuja envolvente (adiós a los polígonos-línea).
+function esFormaAlargada(coords, areaHa) {
+    const areaM2 = areaHa * 10000;
+    if (areaM2 <= 0) return true;
+    const p = perimetroPoligonoM(coords);
+    return (p * p) / (4 * Math.PI * areaM2) > 4;
+}
+
+// Unión de buffers por detección: la mancha se ciñe a lo observado por el
+// satélite, como en las herramientas de referencia (FIRMS, GFE).
+function dibujarCirculosDeteccion(grupo, estilo) {
+    for (const p of grupo) {
+        L.circle([p.lat, p.lon], { ...estilo, radius: RADIO_DETECCION_M })
+            .addTo(grupoPerimetroFuegos);
+        window.perimetrosActivosGeom.push({
+            tipo: 'circulo', centro: [p.lat, p.lon], radioM: RADIO_DETECCION_M,
+            areaHa: Math.PI * RADIO_DETECCION_M * RADIO_DETECCION_M / 10000
+        });
+    }
+}
+
 function dibujarPerimetrosActivos(puntos) {
     grupoPerimetroFuegos.clearLayers();
     window.perimetrosActivosGeom = [];
     if (!puntos.length) return;
 
-    // Perímetro en tiempo real con el mismo lenguaje visual que las
-    // áreas quemadas EFFIS: relleno oscuro ceniza + contorno rojo continuo
-    // (nada de líneas a tramos ni esquinas rectas: formas orgánicas).
+    // Perímetro estimado con el mismo lenguaje visual que las áreas
+    // quemadas EFFIS (relleno ceniza + contorno rojo), delimitado por lo
+    // detectado de verdad: grupos compactos → envolvente suavizada; frentes
+    // alargados o puntos dispersos → unión de buffers por detección.
     const estiloPerimetro = {
         color: '#ff2b1a',
         weight: 2.4,
         fillColor: '#3a3a3a',
         fillOpacity: 0.5
     };
+    const tooltipPerimetro = 'Perímetro aproximado a partir de detecciones VIIRS (375 m). El dato oficial de área quemada es la capa EFFIS.';
 
-    const grupos = agruparPuntosFuego(puntos, 4000);
+    // Encadenamiento a 1,5 km: los frentes reales tienen detecciones densas
+    // (píxel de 375 m); con 4 km se fusionaban focos independientes.
+    const grupos = agruparPuntosFuego(puntos, 1500);
     grupos.forEach(grupo => {
         if (grupo.length === 1) {
-            const radioM = 400;
-            L.circle([grupo[0].lat, grupo[0].lon], { ...estiloPerimetro, radius: radioM })
+            L.circle([grupo[0].lat, grupo[0].lon], { ...estiloPerimetro, radius: RADIO_DETECCION_M })
                 .addTo(grupoPerimetroFuegos)
-                .bindTooltip('Perímetro estimado a partir de detecciones activas');
+                .bindTooltip(tooltipPerimetro);
             window.perimetrosActivosGeom.push({
-                tipo: 'circulo', centro: [grupo[0].lat, grupo[0].lon], radioM,
-                areaHa: Math.PI * radioM * radioM / 10000
+                tipo: 'circulo', centro: [grupo[0].lat, grupo[0].lon], radioM: RADIO_DETECCION_M,
+                areaHa: Math.PI * RADIO_DETECCION_M * RADIO_DETECCION_M / 10000
             });
         } else if (grupo.length === 2) {
             const [a, b] = grupo;
             const midLat = (a.lat + b.lat) / 2, midLon = (a.lon + b.lon) / 2;
-            const radio = Math.max(500, distanciaHaversineMetros(a.lat, a.lon, b.lat, b.lon) / 2 + 300);
+            const radio = Math.max(RADIO_DETECCION_M, distanciaHaversineMetros(a.lat, a.lon, b.lat, b.lon) / 2 + 250);
             L.circle([midLat, midLon], { ...estiloPerimetro, radius: radio })
                 .addTo(grupoPerimetroFuegos)
-                .bindTooltip('Perímetro estimado a partir de detecciones activas');
+                .bindTooltip(tooltipPerimetro);
             window.perimetrosActivosGeom.push({
                 tipo: 'circulo', centro: [midLat, midLon], radioM: radio,
                 areaHa: Math.PI * radio * radio / 10000
             });
         } else {
-            // Contorno orgánico: envolvente convexa + margen en metros +
-            // suavizado Chaikin. El resultado es una mancha curva que rodea
-            // los focos, no un cuadrado: como una cicatriz de fuego real.
             const hull = envolventeConvexa(grupo);
-            const margenM = Math.max(350, radioGrupoMetros(grupo) * 0.15);
-            const contorno = suavizarChaikin(expandirDesdeCentroide(hull, margenM), 2);
-            L.polygon(contorno, estiloPerimetro)
-                .addTo(grupoPerimetroFuegos)
-                .bindTooltip('Perímetro estimado a partir de detecciones activas (crece con nuevas detecciones)');
-            window.perimetrosActivosGeom.push({
-                tipo: 'poligono', coords: contorno,
-                areaHa: areaPoligonoHa(contorno)
-            });
+            const contorno = suavizarChaikin(expandirDesdeCentroide(hull, MARGEN_ENVOLVENTE_M), 2);
+            const areaHa = areaPoligonoHa(contorno);
+            if (esFormaAlargada(contorno, areaHa)) {
+                // Frente lineal o disperso: la envolvente mentiría; se
+                // dibuja la unión de buffers de cada detección.
+                dibujarCirculosDeteccion(grupo, estiloPerimetro);
+            } else {
+                L.polygon(contorno, estiloPerimetro)
+                    .addTo(grupoPerimetroFuegos)
+                    .bindTooltip(tooltipPerimetro);
+                window.perimetrosActivosGeom.push({
+                    tipo: 'poligono', coords: contorno,
+                    areaHa
+                });
+            }
         }
     });
 }
@@ -3854,6 +3908,8 @@ function procesarCsvFuegos(csv, filtroBounds = null) {
         const lat = parseFloat(cols[0]);
         const lon = parseFloat(cols[1]);
         const brillo = parseFloat(cols[2]);
+        const acqDate = (cols[5] || '').trim();   // acq_date: YYYY-MM-DD (UTC)
+        const acqTime = (cols[6] || '').trim();   // acq_time: HHMM (UTC)
         const confianza = cols[9];
 
         if (isNaN(lat) || isNaN(lon)) continue;
@@ -3876,10 +3932,24 @@ function procesarCsvFuegos(csv, filtroBounds = null) {
             })
         }).addTo(grupoFuegos);
 
+        // Cuándo lo vio el satélite (acq_date/acq_time, UTC) y cuándo se
+        // descargaron los datos en esta sesión: trazabilidad del dato.
+        // FIRMS real sirve HHMM ("1430"); se admite también "14:30".
+        const horaUtc = /^\d{4}$/.test(acqTime) ? `${acqTime.slice(0, 2)}:${acqTime.slice(2)}`
+            : (/^\d{1,2}:\d{2}$/.test(acqTime) ? acqTime : '');
+        const detectadoTxt = acqDate ? `${acqDate}${horaUtc ? ' ' + horaUtc : ''} UTC` : '';
+        const consultadoTxt = fuegosDatosTs
+            ? new Date(fuegosDatosTs).toLocaleString(
+                typeof idiomaActual !== 'undefined' ? idiomaActual : undefined,
+                { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '';
+
         marker.bindPopup(`
             <b>${t('popupIncendioActivo')}</b><br>
             ${t('popupBrillo')}: ${brillo} K<br>
             ${t('popupConfianza')}: ${confianza}<br>
+            ${detectadoTxt ? `${t('popupDetectado')}: ${detectadoTxt}<br>` : ''}
+            ${consultadoTxt ? `<small>${t('popupConsultado')}: ${consultadoTxt}</small><br>` : ''}
             <button class="evaluar-fuego-btn" data-lat="${lat}" data-lon="${lon}">${t('popupEvaluarRiesgo')}</button>
         `);
 
@@ -3893,6 +3963,7 @@ function procesarCsvFuegos(csv, filtroBounds = null) {
 
 // 7. CAPA DE INCENDIOS ACTIVOS (NASA FIRMS)
 let fuegosUltimaActualizacion = 0;
+let fuegosDatosTs = null; // cuándo se descargaron los datos que se muestran
 
 async function cargarFuegosActivos() {
     if (Date.now() - fuegosUltimaActualizacion < 10000 && grupoFuegos.getLayers().length > 0) return;
@@ -3916,6 +3987,7 @@ async function cargarFuegosActivos() {
         if (!resp.ok) throw new Error("FIRMS no respondió");
         const csv = await resp.text();
 
+        fuegosDatosTs = Date.now(); // los popups muestran esta hora de consulta
         const contador = procesarCsvFuegos(csv, vistaGlobal ? bounds : null);
 
         if (contador > 0) {
@@ -3925,6 +3997,7 @@ async function cargarFuegosActivos() {
 
     } catch (error) {
         console.error("Error cargando FIRMS:", error);
+        fuegosDatosTs = Date.now();
         procesarCsvFuegos(CSV_EJEMPLO_FUEGOS);
         DOM.contadorFuegos.textContent = t('errorFirmsDev');
         fuegosUltimaActualizacion = Date.now();
@@ -4343,6 +4416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fwiToggle: 'Índice FWI (peligro de incendio)',
         fwiToggleActivar: 'Activar capa FWI de peligro de incendio',
         fwiToggleDesactivar: 'Desactivar capa FWI de peligro de incendio',
+        fwiSoloMapaOscuro: 'El índice FWI solo está disponible con el mapa oscuro (cámbialo en el selector de capas)',
         fwiLeyendaTitulo: 'Índice FWI (EFFIS)',
         fwiLeyendaExpandir: 'Mostrar leyenda FWI',
         fwiLeyendaColapsar: 'Ocultar leyenda FWI',
@@ -4438,6 +4512,8 @@ document.addEventListener('DOMContentLoaded', () => {
             '#capa-fwi-toggle:focus-visible{outline:3px solid #00f3ff;outline-offset:2px;}',
             '#capa-fwi-toggle[aria-pressed="true"]{',
             '  background:rgba(255,165,0,0.28);border-color:rgba(255,165,0,0.85);}',
+            '#capa-fwi-toggle:disabled{opacity:.35;cursor:not-allowed;',
+            '  filter:grayscale(.5);}',
             '#capa-fwi-toggle .fwi-spinner{display:none;width:16px;height:16px;',
             '  border:2px solid rgba(255,255,255,0.25);border-top-color:#ffa500;',
             '  border-radius:50%;animation:fwi-giro 0.8s linear infinite;}',
@@ -4675,11 +4751,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ------------------------------------------------- Regla del mapa base
+    // El FWI de EFFIS es una capa translúcida pensada para fondo oscuro:
+    // sobre satélite o topográfico no se lee. Regla: solo se puede activar
+    // con la base OSCURA; con cualquier otra el botón queda deshabilitado
+    // (y si la capa estaba puesta, se retira sola al cambiar de base).
+    function baseOscuraActiva(map) {
+        var oscura = false;
+        map.eachLayer(function (l) {
+            if (l && l._url && l._url.indexOf('World_Dark_Gray_Base') !== -1) oscura = true;
+        });
+        return oscura;
+    }
+
+    function aplicarReglaBase() {
+        var map = obtenerMapa();
+        if (!map || !ui) return;
+        if (baseOscuraActiva(map)) {
+            ui.boton.disabled = false;
+            ui.boton.title = estaActiva ? tr('fwiToggleDesactivar') : tr('fwiToggleActivar');
+        } else {
+            if (estaActiva || cargando) desactivarCapa();
+            ui.boton.disabled = true;
+            ui.boton.title = tr('fwiSoloMapaOscuro');
+        }
+    }
+
     // --------------------------------------------------------------- API pública
     var api = {
         activar: function () {
             if (estaActiva || cargando) return;
-            if (!ui) return; // UI aún no inyectada; el retry seguirá
+            if (!ui || ui.boton.disabled) return; // solo con mapa oscuro
             activarCapa();
         },
         desactivar: function () { desactivarCapa(); },
@@ -4701,6 +4803,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (contenedor && mapListo) {
             clearInterval(intervalo);
             if (!ui) construirUI(document.body);
+            // Regla "FWI solo con mapa oscuro": estado inicial + reacción
+            // a cada cambio de capa base.
+            var map = obtenerMapa();
+            map.on('baselayerchange', aplicarReglaBase);
+            aplicarReglaBase();
         } else if (intentos >= MAX_INTENTOS_DOM) {
             clearInterval(intervalo);
             // Sin mapa expuesto no podemos funcionar: no rompemos nada.
@@ -5876,10 +5983,6 @@ window.bandasPropagacion = api;
 
     var LS_BOTON_OCULTO = 'manolitoPwaBotonOculto';
 
-    function botonOcultoGuardado() {
-        try { return localStorage.getItem(LS_BOTON_OCULTO) === '1'; } catch (e) { return false; }
-    }
-
     // Colapsa el botón grande a un mini-FAB redondo (y viceversa), con persistencia.
     function ponerBotonColapsado(colapsado) {
         if (!boton || !miniFab) return;
@@ -5970,8 +6073,11 @@ window.bandasPropagacion = api;
         };
         if (mqMovilRail.addEventListener) mqMovilRail.addEventListener('change', colocarEnRail);
         colocarEnRail();
-        // Respeta la preferencia guardada de la última visita.
-        if (botonOcultoGuardado()) ponerBotonColapsado(true);
+        // Por defecto nace COLAPSADO (mini-FAB discreto de 48px): la píldora
+        // grande solo aparece si el usuario la expandió la última vez ('0').
+        var expandidoGuardado = false;
+        try { expandidoGuardado = localStorage.getItem(LS_BOTON_OCULTO) === '0'; } catch (e) { /* sin storage */ }
+        ponerBotonColapsado(!expandidoGuardado);
     }
 
     function mostrarProgreso(texto, pct) {

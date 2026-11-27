@@ -25,7 +25,7 @@
 /* ================= CONFIGURACIÓN ================= */
 
 const CACHE_TILES  = 'manolito-tiles-v1';
-const CACHE_STATIC = 'manolito-static-v4';
+const CACHE_STATIC = 'manolito-static-v5';
 const CACHE_DATOS  = 'manolito-datos-v1';
 
 const CACHES_CONOCIDOS = [CACHE_TILES, CACHE_STATIC, CACHE_DATOS];

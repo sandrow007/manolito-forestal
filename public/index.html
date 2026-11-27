@@ -243,6 +243,14 @@
     #quantum-log-section.section-collapsed .log-line { display: none; }
     #quantum-log-section h2 .ql-ind { display: inline-block; transition: transform 0.2s ease; }
     #quantum-log-section.section-collapsed h2 .ql-ind { transform: rotate(-90deg); }
+    /* Etiqueta "experimental": el registro cuántico es una simulación
+       educativa (30-30-30 con entrelazamiento), no un modelo operativo. */
+    #quantum-log-section .ql-badge {
+        font-family: 'Inter', sans-serif; font-size: 0.58rem; font-weight: 600;
+        letter-spacing: 0.08em; text-transform: uppercase; vertical-align: 2px;
+        color: var(--amber); border: 1px solid rgba(255,170,0,0.45);
+        border-radius: 5px; padding: 1px 5px; margin-left: 4px;
+    }
 
 
     .btn-primary {
@@ -496,7 +504,7 @@
     <div id="contador-fuegos"></div>
 
     <section id="quantum-log-section" class="section-collapsed">
-        <h2><span>Registro cuántico</span><span class="ql-ind">▾</span></h2>
+        <h2><span>Registro cuántico <span class="ql-badge">experimental</span></span><span class="ql-ind">▾</span></h2>
         <div class="log-line" id="log-ry">Sin ejecutar aún.</div>
         <div class="log-line" id="log-cnot"></div>
         <div class="log-line" id="log-medicion"></div>
